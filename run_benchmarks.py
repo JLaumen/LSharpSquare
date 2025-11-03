@@ -17,17 +17,20 @@ from aalpy.utils import generate_random_dfa
 
 test_cases_path = "benchmarking/benchmarks/"
 logging.basicConfig(level=logging.INFO, format=f"%(asctime)s %(levelname)s: %(message)s", datefmt="%H:%M:%S")
+solver_timeout = 200
+replace_basis = True
+use_compatibility = False
 
 
 def is_simple_input(inp: str) -> bool:
     return all(c in ["0", "1", "X"] for c in inp)
 
 
-def test_random_dfa(size: int, error_rate: float) -> Any:
-    dfa = generate_random_dfa(size, ["a", "b", "c"])
+def test_random_dfa(size: int, error_rate: float, alphabet: list) -> Any:
+    dfa = generate_random_dfa(size, alphabet)
     sul = NoisyDfaSUL(dfa, error_rate)
-    oracle = PerfectKnowledgeEqOracle(["a", "b", "c"], sul, dfa)
-    learned_dfa, info = run_lsharp_square(["a", "b", "c"], sul, oracle, return_data=True)
+    oracle = PerfectKnowledgeEqOracle(alphabet, sul, dfa)
+    learned_dfa, info = run_lsharp_square(alphabet, sul, oracle, return_data=True)
     successful = learned_dfa is not None and oracle.find_cex(learned_dfa) is None
     info["successful"] = successful
     print(info)
@@ -80,7 +83,7 @@ def run_test_case(filename: str, horizon: int | None = None) -> dict[str, Any]:
     sul = IncompleteDfaSUL(data.copy())
     eq_oracle = ValidityDataOracle(data.copy())
 
-    learned_dfa, info = run_lsharp_square(alphabet, sul, eq_oracle, return_data=True)
+    learned_dfa, info = run_lsharp_square(alphabet, sul, eq_oracle, return_data=True, solver_timeout=solver_timeout, replace_basis=replace_basis, use_compatibility=use_compatibility)
 
     successful = learned_dfa is not None and eq_oracle.find_cex(learned_dfa) is None
     info["successful"] = successful
@@ -147,8 +150,8 @@ def process_file(file_name: str, target_folder: str) -> str:
     return row
 
 
-def run_test_cases_pool(file: str) -> None:
-    with open(f"benchmarking/results/benchmark_{file}.csv", "w") as f:
+def run_test_cases_pool(file: str, extension: str) -> None:
+    with open(f"benchmarking/results/benchmark{extension}_{file}.csv", "w") as f:
         f.write("file name,succeeded,learning_rounds,automaton_size,learning_time,"
                 "smt_time,eq_oracle_time,total_time,queries_learning,validity_query,nodes,"
                 "informative_nodes,sul_steps,queries_eq_oracle,steps_eq_oracle\n")
@@ -164,14 +167,27 @@ def run_test_cases_pool(file: str) -> None:
 
 
 def main() -> None:
-    test_random_dfa(25, 0.1)
-    # run_test_cases_pool("all21")
-    # for num in range(4, 10):
-    #     run_test_cases_pool(f"s0{num}")
-    # for num in range(10, 24):
-    #     run_test_cases_pool(f"s{num}")
-    # run_test_case_horizon_increase("SnL-milton-16.txt", max_horizon=11)
-    # run_test_case_horizon_increase("airportA3-3-3-15.txt", max_horizon=16)
+    global solver_timeout, replace_basis, use_compatibility
+    # test_random_dfa(50, 0.9, ["a", "b"])
+    solver_timeout = 200
+    replace_basis = True
+    use_compatibility = False
+    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}")
+
+    solver_timeout = 200
+    replace_basis = False
+    use_compatibility = False
+    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}")
+
+    solver_timeout = 200
+    replace_basis = True
+    use_compatibility = True
+    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}")
+
+    solver_timeout = 60
+    replace_basis = True
+    use_compatibility = False
+    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}")
     return
 
 if __name__ == "__main__":

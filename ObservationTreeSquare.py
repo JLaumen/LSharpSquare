@@ -14,21 +14,22 @@ from Apartness import Apartness
 from MooreNode import MooreNode
 from aalpy.automata import Dfa, DfaState
 
-# timeout = 60000
-timeout = 10 * 1000
 
 test_cases_path = "Benchmarking/incomplete_dfa_benchmark/test_cases/"
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format=f"%(asctime)s %(levelname)s: %(message)s",
                     datefmt="%H:%M:%S")
 
 
 class ObservationTreeSquare:
-    def __init__(self, alphabet, sul):
+    def __init__(self, alphabet, sul, solver_timeout, replace_basis, use_compatibility):
         """
         Initializes the observation tree with a root node.
         """
         self.automaton_type = "dfa"
+        self.solver_timeout = solver_timeout * 1000
+        self.replace_basis = replace_basis
+        self.use_compatibility = use_compatibility
 
         # Logger information
         self.smt_time = 0
@@ -47,7 +48,7 @@ class ObservationTreeSquare:
         self.guaranteed_basis = [self.root]
         self.frontier_to_basis_dict = dict()
 
-        self.apartness_cache = set()
+        # self.apartness_cache = set()
 
     def insert_observation(self, inputs, output):
         """
@@ -75,12 +76,9 @@ class ObservationTreeSquare:
         """
         Perform an experiment by querying the SUL if necessary and updating the tree.
         """
-        node = self.get_successor(inputs)
-        if node is None or node.output is None:
-            output = self.sul.query(inputs)
-            self.insert_observation(inputs, output)
-            return output
-        return node.output
+        outputs, extended = self._get_output_sequence(inputs, query_mode='final')
+        self.insert_observation_sequence(inputs, outputs)
+        return outputs[-1]
 
     def get_successor(self, inputs, start_node=None):
         """
@@ -178,6 +176,8 @@ class ObservationTreeSquare:
             return
         if not node in self.guaranteed_basis:
             self.update_basis_candidates(node)
+            if len(self.frontier_to_basis_dict[node]) == 0:
+                return
         for successor in node.successors.values():
             self.update_frontier_to_basis_dict_dfs(successor)
 
@@ -185,7 +185,14 @@ class ObservationTreeSquare:
         """
         If an isolated frontier node is found, reset the queue and restart from the guaranteed basis plus the isolated node.
         """
-        for iso_frontier_node, basis_list in self.frontier_to_basis_dict.items():
+        queue = deque([self.root])
+        while queue:
+            iso_frontier_node = queue.popleft()
+            for successor in iso_frontier_node.successors.values():
+                queue.append(successor)
+            if iso_frontier_node in self.guaranteed_basis:
+                continue
+            basis_list = self.frontier_to_basis_dict[iso_frontier_node]
             if not basis_list:
                 self.guaranteed_basis.append(iso_frontier_node)
                 # Update the candidates
@@ -194,6 +201,34 @@ class ObservationTreeSquare:
                     if not Apartness.states_are_incompatible(node, iso_frontier_node, self):
                         candidates.add(iso_frontier_node)
                 self.size = max(self.size, len(self.guaranteed_basis))
+                return True
+
+        if not self.replace_basis:
+            return False
+
+        queue = deque([self.root])
+        while queue:
+            iso_frontier_node = queue.popleft()
+            for successor in iso_frontier_node.successors.values():
+                queue.append(successor)
+            if iso_frontier_node in self.guaranteed_basis:
+                continue
+            basis_list = self.frontier_to_basis_dict[iso_frontier_node]
+            if len(basis_list) == 1:
+                candidate = next(iter(self.frontier_to_basis_dict[iso_frontier_node]))
+                if len(self.get_access_sequence(candidate)) <= len(self.get_access_sequence(iso_frontier_node)):
+                    continue
+                # print(f"Replacing length {len(self.get_access_sequence(candidate))} access sequence with length {len(self.get_access_sequence(iso_frontier_node))}")
+                self.guaranteed_basis.remove(candidate)
+                self.guaranteed_basis.append(iso_frontier_node)
+                # Update the candidates
+                del self.frontier_to_basis_dict[iso_frontier_node]
+                for node, candidates in self.frontier_to_basis_dict.items():
+                    if candidate in candidates:
+                        candidates.remove(candidate)
+                    if not Apartness.states_are_incompatible(node, iso_frontier_node, self):
+                        candidates.add(iso_frontier_node)
+                self.frontier_to_basis_dict[candidate] = {node for node in self.guaranteed_basis if not Apartness.states_are_incompatible(node, iso_frontier_node, self)}
                 return True
         return False
 
@@ -205,15 +240,18 @@ class ObservationTreeSquare:
         for basis_node in self.guaranteed_basis:
             for letter in self.alphabet:
                 frontier_node = basis_node.get_successor(letter)
-                if self.identify_frontier(frontier_node):
+                while self.identify_frontier(frontier_node):
                     extended = True
+                    self.update_basis_candidates(frontier_node)
+                #     print(len(self.frontier_to_basis_dict[frontier_node]))
+                # print("Done with node")
         return extended
 
     def identify_frontier(self, frontier_node):
         """
         Identify a specific frontier node
         """
-        if len(self.frontier_to_basis_dict[frontier_node]) <= 1:
+        if len(self.frontier_to_basis_dict[frontier_node]) == 0:
             return False
 
         inputs_to_frontier = self.get_transfer_sequence(self.root, frontier_node)
@@ -223,10 +261,10 @@ class ObservationTreeSquare:
         for witness_seq in witnesses:
             inputs = inputs_to_frontier + witness_seq
             outputs, extended = self._get_output_sequence(inputs, query_mode='final')
-            if extended:
-                out_extended = True
             self.insert_observation_sequence(inputs, outputs)
-        return out_extended
+            if extended:
+                return True
+        return False
 
     def _get_witnesses_bfs(self, frontier_node):
         """
@@ -278,7 +316,7 @@ class ObservationTreeSquare:
         logging.debug(f"Basis size: {len(self.guaranteed_basis)}, Frontier size: {len(self.frontier_to_basis_dict)}")
         start_smt_time = time.time()
 
-        s = Solver(name="z3", solver_options={"timeout": timeout})  # or another backend supported by pySMT
+        s = Solver(name="z3", solver_options={"timeout": self.solver_timeout})  # or another backend supported by pySMT
 
         # Function declarations
         delta = Symbol("delta", FunctionType(INT, [INT, INT]))  # δ: int × int → int
@@ -407,16 +445,16 @@ class ObservationTreeSquare:
         Tries to find an observation tree,
         for which each frontier state is identified as much as possible.
         """
-        self.update_frontier()
+        self.update_frontier_to_basis_dict()
         self.expand_frontier()
         while self.promote_node_to_basis():
-            self.update_frontier()
+            self.update_frontier_to_basis_dict()
             self.expand_frontier()
 
         while self.make_frontiers_identified():
             self.update_frontier_to_basis_dict()
             while self.promote_node_to_basis():
-                self.update_frontier()
+                self.update_frontier_to_basis_dict()
                 self.expand_frontier()
 
     def process_counter_example(self, cex_inputs, output):
@@ -460,15 +498,19 @@ class ObservationTreeSquare:
                 current_node = current_node.get_successor(inp)
             if current_node is None:
                 if query_mode == "full" or (inp_num == len(inputs) - 1 and query_mode == "final"):
-                    outputs.append(self.sul.query(inputs[:inp_num + 1]))
-                    queried = True
+                    new_output = self.sul.query(inputs[:inp_num + 1])
+                    outputs.append(new_output)
+                    if new_output != "unknown":
+                        queried = True
                 else:
                     outputs.append(None)
             else:
                 if current_node.output is None and (
                         query_mode == "full" or (inp_num == len(inputs) - 1 and query_mode == "final")):
-                    outputs.append(self.sul.query(inputs[:inp_num + 1]))
-                    queried = True
+                    new_output = self.sul.query(inputs[:inp_num + 1])
+                    outputs.append(new_output)
+                    if new_output != "unknown":
+                        queried = True
                 else:
                     outputs.append(current_node.output)
         return outputs, queried

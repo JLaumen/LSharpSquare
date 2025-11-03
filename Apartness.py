@@ -4,7 +4,7 @@ from copy import copy
 from MooreNode import *
 
 pessimistic = False
-apart = True
+apart = False
 
 
 class Apartness:
@@ -83,6 +83,8 @@ class Apartness:
         new_node.access_sequence = access
         new_node.successors = {}
         for k, v in node.successors.items():
+            if not v.leads_to_known:
+                continue
             new_node.successors[k] = Apartness.clone_subtree(v, access + [k])
             new_node.successors[k].parent = new_node
             new_node.successors[k].input_to_parent = k
@@ -101,20 +103,20 @@ class Apartness:
     def states_are_incompatible(first, second, ob_tree):
         if not first.leads_to_known or not second.leads_to_known:
             return False
-        if apart:
+        if not ob_tree.use_compatibility:
             return Apartness.states_are_apart(first, second, ob_tree)
 
         # Assumes that a node cannot be a descendant of a node with a higher id
         if second.id < first.id:
             first, second = second, first
 
-        if (first.id, second.id) in ob_tree.apartness_cache:
-            return True
+        # if (first.id, second.id) in ob_tree.apartness_cache:
+        #     return True
 
         # Checking apartness is easier than checking incompatibility,
         # so we check that first
         if Apartness.states_are_apart(first, second, ob_tree):
-            ob_tree.apartness_cache.add((first.id, second.id))
+            # ob_tree.apartness_cache.add((first.id, second.id))
             return True
 
         # Unfortunately, we need to clone the tree to avoid modifying it.
@@ -132,8 +134,9 @@ class Apartness:
         first_access, second_access = Apartness.merge(first_node, second_node)
 
         if first_access is not None:
+            return True
             # Incompatible!
-            ob_tree.apartness_cache.add((first.id, second.id))
+            # ob_tree.apartness_cache.add((first.id, second.id))
 
             # print("Conflict when merging", first.id, second.id)
             # print(first_node.access_sequence, second_node.access_sequence)

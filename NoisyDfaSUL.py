@@ -50,7 +50,7 @@ class NoisyDfaSUL(SUL):
         if out == "unknown":
             self.num_unsuccesful_queries += 1
         # Return unknown with a probability error_rate
-        if random() < self.error_rate:
+        if random() < self.error_rate**len(word):
             self.words.add("".join(word))
             return "unknown"
 

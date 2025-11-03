@@ -10,14 +10,17 @@ def run_lsharp_square(alphabet: list,
                       sul: SUL,
                       eq_oracle: Oracle,
                       cache_and_non_det_check: bool = True,
-                      return_data: bool = False):
+                      return_data: bool = False,
+                      solver_timeout: int = 200,
+                      replace_basis: bool = True,
+                      use_compatibility: bool = False):
     if cache_and_non_det_check:
         # Wrap the sul in the CacheSUL, so that all steps/queries are cached
 
 
         eq_oracle.sul = sul
 
-    ob_tree = ObservationTreeSquare(alphabet, sul)
+    ob_tree = ObservationTreeSquare(alphabet, sul, solver_timeout, replace_basis, use_compatibility)
     start_time = time.time()
 
     eq_query_time = 0
@@ -48,7 +51,7 @@ def run_lsharp_square(alphabet: list,
             break
         # Get the output of the hypothesis for the cex
         hypothesis.reset_to_initial()
-        hypothesis.step(None)
+        last = hypothesis.step(None)
         for letter in cex:
             last = hypothesis.step(letter)
 
