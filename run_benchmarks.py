@@ -17,9 +17,6 @@ from aalpy.utils import generate_random_dfa
 
 test_cases_path = "benchmarking/benchmarks/"
 logging.basicConfig(level=logging.INFO, format=f"%(asctime)s %(levelname)s: %(message)s", datefmt="%H:%M:%S")
-solver_timeout = 200
-replace_basis = True
-use_compatibility = False
 
 
 def is_simple_input(inp: str) -> bool:
@@ -77,7 +74,7 @@ def parse_file(filename: str, alphabet: list, horizon: int | None = None) -> tup
         return known_words, observed_alphabet
 
 
-def run_test_case(filename: str, horizon: int | None = None) -> dict[str, Any]:
+def run_test_case(filename: str, solver_timeout, replace_basis, use_compatibility, horizon: int | None = None) -> dict[str, Any]:
     alphabet = [True, False]
     data, alphabet = parse_file(filename, alphabet, horizon)
     sul = IncompleteDfaSUL(data.copy())
@@ -124,9 +121,9 @@ def run_test_case_horizon_increase(file_name: str, max_horizon: int | None = Non
                 break
 
 
-def process_file(file_name: str, target_folder: str) -> str:
+def process_file(file_name: str, target_folder: str, solver_timeout, replace_basis, use_compatibility) -> str:
     logging.info(f"Testing {file_name}")
-    info = run_test_case(f"{target_folder}/{file_name}")
+    info = run_test_case(f"{target_folder}/{file_name}", solver_timeout, replace_basis, use_compatibility)
     row = ','.join([f"{target_folder}/{file_name}",
                     str(info['successful']),
                     str(info['learning_rounds']),
@@ -150,7 +147,7 @@ def process_file(file_name: str, target_folder: str) -> str:
     return row
 
 
-def run_test_cases_pool(file: str, extension: str) -> None:
+def run_test_cases_pool(file: str, extension: str, solver_timeout, replace_basis, use_compatibility) -> None:
     with open(f"benchmarking/results/benchmark{extension}_{file}.csv", "w") as f:
         f.write("file name,succeeded,learning_rounds,automaton_size,learning_time,"
                 "smt_time,eq_oracle_time,total_time,queries_learning,validity_query,nodes,"
@@ -161,33 +158,32 @@ def run_test_cases_pool(file: str, extension: str) -> None:
         file_names = sorted(os.listdir(folder_path))
 
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            results = list(executor.map(process_file, file_names, [target_folder] * len(file_names)))
+            results = list(executor.map(process_file, file_names, [target_folder] * len(file_names), [solver_timeout] * len(file_names),[replace_basis] * len(file_names), [use_compatibility] * len(file_names)))
             for row in results:
                 f.write(row)
 
 
 def main() -> None:
-    global solver_timeout, replace_basis, use_compatibility
     # test_random_dfa(50, 0.9, ["a", "b"])
     solver_timeout = 200
     replace_basis = True
     use_compatibility = False
-    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}")
+    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
 
     solver_timeout = 200
     replace_basis = False
     use_compatibility = False
-    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}")
+    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
 
     solver_timeout = 200
     replace_basis = True
     use_compatibility = True
-    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}")
+    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
 
     solver_timeout = 60
     replace_basis = True
     use_compatibility = False
-    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}")
+    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
     return
 
 if __name__ == "__main__":

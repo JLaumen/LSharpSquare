@@ -1,10 +1,13 @@
 # python
-import re
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+from pathlib import Path
 
-CSV_PATH = "benchmarking/results/benchmark_all.csv"
-OUT_PNG = "benchmark_total_time_by_suffix.png"
+CSV_PATH_A = "benchmarking/results/benchmark_t200_rTrue_cFalse_all.csv"
+CSV_PATH_B = "benchmarking/results/benchmark_t200_rFalse_cFalse_all.csv"
+OUT_PNG = "benchmark_total_time_compare_by_suffix.png"
 
 def to_bool(x):
     if pd.isna(x):
@@ -22,46 +25,120 @@ def to_bool(x):
 def parse_suffix_to_int(name: str):
     if not isinstance(name, str):
         return None
-    # take the last two characters as-is (do not remove underscores)
     last_two = name[9:11] if len(name) >= 2 else name
-    return (int(last_two) if last_two[0] != "0" else int(last_two))
+    try:
+        return int(last_two)
+    except Exception:
+        return None
 
-def main():
-    df = pd.read_csv(CSV_PATH, dtype=str)
+def load_and_clean(path: str, label: str) -> pd.DataFrame:
+    df = pd.read_csv(path, dtype=str)
     if "file name" not in df.columns:
-        raise SystemExit("CSV missing `file name` column")
-
+        raise SystemExit(f"CSV missing `file name` column: {path}")
     df["automaton_size_num"] = pd.to_numeric(df.get("automaton_size", pd.Series(["0"]*len(df))), errors="coerce").fillna(0).astype(int)
     df["succeeded_raw"] = df.get("succeeded", pd.Series(["False"]*len(df)))
     df["time_raw"] = df.get("total_time", pd.Series([None]*len(df)))
     df["is_success"] = df.apply(lambda r: (r["automaton_size_num"] != 0) and to_bool(r["succeeded_raw"]) and float(r["time_raw"]) < 200, axis=1)
+    df = df[df["is_success"]].copy()
+    if df.empty:
+        return pd.DataFrame()
+    df["suffix_x"] = df["file name"].apply(parse_suffix_to_int)
+    df["total_time_num"] = pd.to_numeric(df.get("total_time", pd.Series([None]*len(df))), errors="coerce")
+    df = df.dropna(subset=["suffix_x", "total_time_num"]).copy()
+    if df.empty:
+        return pd.DataFrame()
+    df["suffix_int"] = df["suffix_x"].astype(int)
+    df["source"] = label
+    return df[["suffix_int", "total_time_num", "source"]]
 
-    df_succ = df[df["is_success"]].copy()
-    if df_succ.empty:
-        print("No succeeded rows found.")
+def main():
+    a = load_and_clean(CSV_PATH_A, Path(CSV_PATH_A).stem)
+    b = load_and_clean(CSV_PATH_B, Path(CSV_PATH_B).stem)
+
+    if a.empty and b.empty:
+        print("No data to plot from either file.")
         return
 
-    df_succ["suffix_x"] = df_succ["file name"].apply(parse_suffix_to_int)
-    df_succ["total_time_num"] = pd.to_numeric(df_succ.get("total_time", pd.Series([None]*len(df_succ))), errors="coerce")
-
-    plot_df = df_succ.dropna(subset=["suffix_x", "total_time_num"])
-    if plot_df.empty:
-        print("No rows with valid suffix and total_time to plot.")
+    # unified suffix order so boxes align
+    suffix_order = sorted(set(a["suffix_int"].unique() if not a.empty else []).union(set(b["suffix_int"].unique() if not b.empty else [])))
+    if not suffix_order:
+        print("No suffixes found.")
         return
 
-    x = plot_df["suffix_x"].astype(int)
-    y = plot_df["total_time_num"].astype(float)
+    # prepare per-suffix lists for each dataset
+    data_a = []
+    data_b = []
+    counts_a = []
+    counts_b = []
+    for s in suffix_order:
+        vals_a = a.loc[a["suffix_int"] == s, "total_time_num"].dropna().astype(float).values if not a.empty else np.array([])
+        vals_b = b.loc[b["suffix_int"] == s, "total_time_num"].dropna().astype(float).values if not b.empty else np.array([])
+        data_a.append(vals_a)
+        data_b.append(vals_b)
+        counts_a.append(len(vals_a))
+        counts_b.append(len(vals_b))
 
-    # plt.style.use("seaborn-whitegrid")
-    plt.figure(figsize=(9, 5))
-    sc = plt.scatter(x, y, alpha=1, s=5, linewidths=0.6)
-    plt.yscale("log")
-    plt.xlabel("Suffix (last two chars of `file_name`)")
-    plt.ylabel("total_time (log scale)")
-    plt.title("Total Time vs. File Suffix (succeeded items only)")
-    plt.grid(True, linestyle="--", alpha=0.3)
-    # cbar = plt.colorbar(sc)
-    # cbar.set_label("suffix (numeric)")
+    x = np.arange(len(suffix_order))
+    width = 0.35
+    pos_a = x - width/2
+    pos_b = x + width/2
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns_palette = ("#ff424b", "#008f89")
+    # plot only non-empty groups for each dataset
+    nonempty_a_idx = [i for i, d in enumerate(data_a) if len(d) > 0]
+    nonempty_b_idx = [i for i, d in enumerate(data_b) if len(d) > 0]
+
+    if nonempty_a_idx:
+        data_a_plot = [data_a[i] for i in nonempty_a_idx]
+        pos_a_plot = [pos_a[i] for i in nonempty_a_idx]
+        ax.boxplot(
+            data_a_plot,
+            positions=pos_a_plot,
+            widths=width,
+            patch_artist=True,
+            showfliers=False,
+            whis=(25, 100),  # 25/50/75; whiskers up to max (no min)
+            boxprops={"facecolor": sns_palette[0], "edgecolor": "#444444"},
+            medianprops={"color": "#000000"},
+            whiskerprops={"color": "#444444"},
+            capprops={"color": "#444444"}
+        )
+
+    if nonempty_b_idx:
+        data_b_plot = [data_b[i] for i in nonempty_b_idx]
+        pos_b_plot = [pos_b[i] for i in nonempty_b_idx]
+        ax.boxplot(
+            data_b_plot,
+            positions=pos_b_plot,
+            widths=width,
+            patch_artist=True,
+            showfliers=False,
+            whis=(25, 100),
+            boxprops={"facecolor": sns_palette[1], "edgecolor": "#444444"},
+            medianprops={"color": "#000000"},
+            whiskerprops={"color": "#444444"},
+            capprops={"color": "#444444"}
+        )
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([str(s) for s in suffix_order])
+    ax.set_xlabel("Benchmark")
+    ax.set_ylabel("Time (seconds)")
+    ax.set_title("Comparison of Basis Replacement")
+    ax.set_yscale("log")
+    ax.grid(True, linestyle="--", alpha=0.25)
+
+    # legend (manual)
+    from matplotlib.patches import Patch
+    legend_handles = []
+    if any(counts_a):
+        legend_handles.append(Patch(facecolor=sns_palette[0], edgecolor="#444444", label="With Basis Replacement"))
+    if any(counts_b):
+        legend_handles.append(Patch(facecolor=sns_palette[1], edgecolor="#444444", label="Without Basis Replacement"))
+    if legend_handles:
+        ax.legend(handles=legend_handles, loc="upper left")
+
     plt.tight_layout()
     plt.savefig(OUT_PNG, dpi=150)
     print(f"Saved plot to `{OUT_PNG}`")
