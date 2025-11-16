@@ -6,8 +6,8 @@ import seaborn as sns
 from pathlib import Path
 
 CSV_PATH_A = "benchmarking/results/benchmark_t200_rTrue_cFalse_all.csv"
-CSV_PATH_B = "benchmarking/results/benchmark_t200_rFalse_cFalse_all.csv"
-OUT_PNG = "benchmark_total_time_compare_by_suffix.png"
+CSV_PATH_B = "benchmarking/results/benchmark_t200_rTrue_cTrue_all.csv"
+OUT_PNG = "vs_comp.png"
 
 def to_bool(x):
     if pd.isna(x):
@@ -38,31 +38,74 @@ def load_and_clean(path: str, label: str) -> pd.DataFrame:
     df["automaton_size_num"] = pd.to_numeric(df.get("automaton_size", pd.Series(["0"]*len(df))), errors="coerce").fillna(0).astype(int)
     df["succeeded_raw"] = df.get("succeeded", pd.Series(["False"]*len(df)))
     df["time_raw"] = df.get("total_time", pd.Series([None]*len(df)))
-    df["is_success"] = df.apply(lambda r: (r["automaton_size_num"] != 0) and to_bool(r["succeeded_raw"]) and float(r["time_raw"]) < 200, axis=1)
+    df["queries_raw"] = df.get("queries_learning", pd.Series([None]*len(df)))
+    df["validity_raw"] = df.get("validity_query", pd.Series([None]*len(df)))
+    # keep only rows that succeeded and have a numeric measurement (this is the 'succeeded' check)
+    df["is_success"] = df.apply(lambda r: (r["automaton_size_num"] != 0) and to_bool(r["succeeded_raw"]) and pd.notna(r["time_raw"]) and str(r["time_raw"]).strip() != "" and float(r["time_raw"]) < 200, axis=1)
     df = df[df["is_success"]].copy()
     if df.empty:
         return pd.DataFrame()
     df["suffix_x"] = df["file name"].apply(parse_suffix_to_int)
-    df["total_time_num"] = pd.to_numeric(df.get("total_time", pd.Series([None]*len(df))), errors="coerce")
+    df["total_time_num"] = pd.to_numeric(df.get("queries_learning", pd.Series([None]*len(df))), errors="coerce")
     df = df.dropna(subset=["suffix_x", "total_time_num"]).copy()
     if df.empty:
         return pd.DataFrame()
     df["suffix_int"] = df["suffix_x"].astype(int)
     df["source"] = label
-    return df[["suffix_int", "total_time_num", "source"]]
+    # keep `file name` so we can intersect successful benchmarks across files
+    return df[["file name", "suffix_int", "total_time_num", "source"]]
+
+def load_and_clean2(path: str, label: str) -> pd.DataFrame:
+    df = pd.read_csv(path, dtype=str)
+    if "file name" not in df.columns:
+        raise SystemExit(f"CSV missing `file name` column: {path}")
+    df["automaton_size_num"] = pd.to_numeric(df.get("automaton_size", pd.Series(["0"]*len(df))), errors="coerce").fillna(0).astype(int)
+    # df["succeeded_raw"] = df.get("succeeded", pd.Series(["False"]*len(df)))
+    df["time_raw"] = df.get("total_time", pd.Series([None]*len(df)))
+    df["queries_raw"] = df.get("queries_learning", pd.Series([None]*len(df)))
+    df["validity_raw"] = df.get("validity_query", pd.Series([None]*len(df)))
+    # keep only rows that succeeded and have a numeric measurement (this is the 'succeeded' check)
+    df["is_success"] = df.apply(lambda r: (r["automaton_size_num"] != 0) and pd.notna(r["time_raw"]) and str(r["time_raw"]).strip() != "TIMEOUT" and float(r["time_raw"]) < 200, axis=1)
+    df = df[df["is_success"]].copy()
+    if df.empty:
+        return pd.DataFrame()
+    df["suffix_x"] = df["file name"].apply(parse_suffix_to_int)
+    df["total_time_num"] = pd.to_numeric(df.get("validity_query", pd.Series([None]*len(df))), errors="coerce")
+    df = df.dropna(subset=["suffix_x", "total_time_num"]).copy()
+    if df.empty:
+        return pd.DataFrame()
+    df["suffix_int"] = df["suffix_x"].astype(int)
+    df["source"] = label
+    # keep `file name` so we can intersect successful benchmarks across files
+    return df[["file name", "suffix_int", "total_time_num", "source"]]
 
 def main():
     a = load_and_clean(CSV_PATH_A, Path(CSV_PATH_A).stem)
     b = load_and_clean(CSV_PATH_B, Path(CSV_PATH_B).stem)
 
-    if a.empty and b.empty:
-        print("No data to plot from either file.")
+    if a.empty or b.empty:
+        print("One or both files have no successful benchmarks to compare.")
         return
 
-    # unified suffix order so boxes align
-    suffix_order = sorted(set(a["suffix_int"].unique() if not a.empty else []).union(set(b["suffix_int"].unique() if not b.empty else [])))
+    # Print the number of successful benchmarks in each file out of total
+    total_a = len(pd.read_csv(CSV_PATH_A))
+    total_b = len(pd.read_csv(CSV_PATH_B))
+    print(f"File A `{CSV_PATH_A}`: {len(a)}/{total_a} succeeded")
+    print(f"File B `{CSV_PATH_B}`: {len(b)}/{total_b} succeeded")
+
+    # keep only benchmarks (by `file name`) that succeeded in BOTH files
+    common_files = set(a["file name"]).intersection(set(b["file name"]))
+    if not common_files:
+        print("No benchmarks succeeded in both files.")
+        return
+
+    a = a[a["file name"].isin(common_files)].copy()
+    b = b[b["file name"].isin(common_files)].copy()
+
+    # unified suffix order so boxes align (suffixes come from the common subset)
+    suffix_order = sorted(set(a["suffix_int"].unique()).union(set(b["suffix_int"].unique())))
     if not suffix_order:
-        print("No suffixes found.")
+        print("No suffixes found among common benchmarks.")
         return
 
     # prepare per-suffix lists for each dataset
@@ -85,7 +128,6 @@ def main():
 
     fig, ax = plt.subplots(figsize=(10, 6))
     sns_palette = ("#ff424b", "#008f89")
-    # plot only non-empty groups for each dataset
     nonempty_a_idx = [i for i, d in enumerate(data_a) if len(d) > 0]
     nonempty_b_idx = [i for i, d in enumerate(data_b) if len(d) > 0]
 
@@ -98,7 +140,7 @@ def main():
             widths=width,
             patch_artist=True,
             showfliers=False,
-            whis=(25, 100),  # 25/50/75; whiskers up to max (no min)
+            whis=(25, 100),
             boxprops={"facecolor": sns_palette[0], "edgecolor": "#444444"},
             medianprops={"color": "#000000"},
             whiskerprops={"color": "#444444"},
@@ -124,18 +166,17 @@ def main():
     ax.set_xticks(x)
     ax.set_xticklabels([str(s) for s in suffix_order])
     ax.set_xlabel("Benchmark")
-    ax.set_ylabel("Time (seconds)")
-    ax.set_title("Comparison of Basis Replacement")
+    ax.set_ylabel("Membership Queries")
+    # ax.set_title("Comparison of Basis Replacement (only benchmarks succeeded in both files)")
     ax.set_yscale("log")
     ax.grid(True, linestyle="--", alpha=0.25)
 
-    # legend (manual)
     from matplotlib.patches import Patch
     legend_handles = []
     if any(counts_a):
-        legend_handles.append(Patch(facecolor=sns_palette[0], edgecolor="#444444", label="With Basis Replacement"))
+        legend_handles.append(Patch(facecolor=sns_palette[0], edgecolor="#444444", label="With Apartness"))
     if any(counts_b):
-        legend_handles.append(Patch(facecolor=sns_palette[1], edgecolor="#444444", label="Without Basis Replacement"))
+        legend_handles.append(Patch(facecolor=sns_palette[1], edgecolor="#444444", label="With Compatibility"))
     if legend_handles:
         ax.legend(handles=legend_handles, loc="upper left")
 

@@ -87,7 +87,7 @@ def run_test_case(filename: str, solver_timeout, replace_basis, use_compatibilit
     return info
 
 
-def run_test_case_horizon_increase(file_name: str, max_horizon: int | None = None) -> None:
+def run_test_case_horizon_increase(file_name: str, solver_timeout, replace_basis, use_compatibility, max_horizon: int | None = None) -> None:
     with open(f"benchmarking/results/benchmark_{file_name.replace('/', '_')}.csv", "w") as f:
         f.write("horizon,file_name,succeeded,learning_rounds,automaton_size,learning_time,"
                 "smt_time,eq_oracle_time,total_time,queries_learning,validity_query,nodes,"
@@ -95,7 +95,7 @@ def run_test_case_horizon_increase(file_name: str, max_horizon: int | None = Non
 
         for horizon in range(1, max_horizon + 1):
             logging.info(f"Testing {file_name} with horizon={horizon}")
-            info = run_test_case(f"AAL-benchmarks/{file_name}", horizon=horizon)
+            info = run_test_case(f"AAL-benchmarks/{file_name}", solver_timeout, replace_basis, use_compatibility, horizon=horizon)
             f.write(','.join([str(horizon),
                               file_name,
                               str(info['successful']),
@@ -168,22 +168,23 @@ def main() -> None:
     solver_timeout = 200
     replace_basis = True
     use_compatibility = False
-    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
+    # run_test_case_horizon_increase("SnL-milton-16.txt", solver_timeout, replace_basis, use_compatibility, max_horizon=17)
+    run_test_cases_pool("all9", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
 
-    solver_timeout = 200
-    replace_basis = False
-    use_compatibility = False
-    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
-
-    solver_timeout = 200
-    replace_basis = True
-    use_compatibility = True
-    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
-
-    solver_timeout = 60
-    replace_basis = True
-    use_compatibility = False
-    run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
+    # solver_timeout = 200
+    # replace_basis = False
+    # use_compatibility = False
+    # run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
+    #
+    # solver_timeout = 200
+    # replace_basis = True
+    # use_compatibility = True
+    # run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
+    #
+    # solver_timeout = 60
+    # replace_basis = True
+    # use_compatibility = False
+    # run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
     return
 
 if __name__ == "__main__":
