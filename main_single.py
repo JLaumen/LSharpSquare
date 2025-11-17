@@ -18,6 +18,7 @@ from RandomWalkEquOracly import RandomWalkEqOracle
 from WMethodEqOracle import RandomWMethodEqOracle
 from LSharpSquare import run_lsharp_square
 from RandomWordEqOracle import RandomWordEqOracle
+from WPOracle import RandomWpMethodEqOracle
 
 
 def run(example, t_type):
@@ -37,16 +38,18 @@ def run(example, t_type):
     oracle = SystemDCOracleST(alphabet, sul, M, counter_examples_dict[example][t_type], walks_per_state=300,
                               walk_len=30, example=example, t_type=t_type)
     oracle = RandomWMethodEqOracle(alphabet, sul, counter_examples_dict[example][t_type], walks_per_state=300, walk_len=30)
+    oracle = RandomWpMethodEqOracle(alphabet, sul, counter_examples_dict[example][t_type])
     #oracle = RandomWalkEqOracle(alphabet, sul)
     #oracle = RandomWordEqOracle(alphabet, sul)
 
-
+    start_time = int(time.time() * 1000) / 1000
     dfa3, data = run_lsharp_square(alphabet,
                            sul,
                            oracle,
                            cache_and_non_det_check=False,
                            return_data=True)
     print(dfa3)
+    print(int(time.time() * 1000) / 1000 - start_time)
 
 
     data["ce_length"] = len(counter_examples_dict[example][t_type][0][1])
