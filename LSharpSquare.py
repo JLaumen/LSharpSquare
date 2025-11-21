@@ -4,14 +4,14 @@ from aalpy.base import Oracle
 from aalpy.base import SUL
 from ObservationTreeSquare import ObservationTreeSquare
 
-timeout = 200
+timeout = 20000
 
 def run_lsharp_square(alphabet: list,
                       sul: SUL,
                       eq_oracle: Oracle,
                       cache_and_non_det_check: bool = True,
                       return_data: bool = False,
-                      solver_timeout: int = 200,
+                      solver_timeout: int = 20000,
                       replace_basis: bool = True,
                       use_compatibility: bool = False):
     if cache_and_non_det_check:

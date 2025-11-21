@@ -14,11 +14,11 @@ from rers_sul_s_t import RERSSULST
 from data.counter_examples import counter_examples_dict
 from multiprocessing import Process, Queue
 import random
-from RandomWalkEquOracly import RandomWalkEqOracle
-from WMethodEqOracle import RandomWMethodEqOracle
+# from RandomWalkEquOracly import RandomWalkEqOracle
+from Oracle import RandomWMethodEqOracle
 from LSharpSquare import run_lsharp_square
-from RandomWordEqOracle import RandomWordEqOracle
-from WPOracle import RandomWpMethodEqOracle
+# from RandomWordEqOracle import RandomWordEqOracle
+from WPOracle import WpMethodEqOracle
 
 
 def run(example, t_type):
@@ -38,7 +38,7 @@ def run(example, t_type):
     oracle = SystemDCOracleST(alphabet, sul, M, counter_examples_dict[example][t_type], walks_per_state=300,
                               walk_len=30, example=example, t_type=t_type)
     oracle = RandomWMethodEqOracle(alphabet, sul, counter_examples_dict[example][t_type], walks_per_state=300, walk_len=30)
-    oracle = RandomWpMethodEqOracle(alphabet, sul, counter_examples_dict[example][t_type])
+    oracle = WpMethodEqOracle(alphabet, sul, counter_examples_dict[example][t_type])
     #oracle = RandomWalkEqOracle(alphabet, sul)
     #oracle = RandomWordEqOracle(alphabet, sul)
 

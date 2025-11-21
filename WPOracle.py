@@ -68,12 +68,20 @@ class WpMethodEqOracle(Oracle):
     Implements the Wp-method equivalence oracle.
     """
 
-    def __init__(self, alphabet: list, sul: SUL, max_number_of_states=4):
+    def __init__(self, alphabet: list, sul: SUL, traces, max_number_of_states=4):
         super().__init__(alphabet, sul)
         self.m = max_number_of_states
         self.cache = set()
+        self.traces = traces
 
     def find_cex(self, hypothesis):
+        for label, trace in self.traces:
+            if label == "?":
+                continue
+            label = True if label == "+" else False
+            if hypothesis.execute_sequence(hypothesis.initial_state, trace)[-1] != label:
+                return trace
+
         if not hypothesis.characterization_set:
             hypothesis.characterization_set = hypothesis.compute_characterization_set()
 
@@ -103,7 +111,7 @@ class WpMethodEqOracle(Oracle):
                     out_sul = self.sul.step(letter)
                     self.num_steps += 1
 
-                    if out_hyp != out_sul:
+                    if out_hyp != out_sul and out_sul != "unknown":
                         self.sul.post()
                         return seq[: ind + 1]
                 self.cache.add(seq)
