@@ -169,7 +169,7 @@ def main() -> None:
     replace_basis = True
     use_compatibility = False
     # run_test_case_horizon_increase("SnL-milton-16.txt", solver_timeout, replace_basis, use_compatibility, max_horizon=17)
-    run_test_cases_pool("all9", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
+    run_test_cases_pool("all", f"2_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
 
     # solver_timeout = 200
     # replace_basis = False

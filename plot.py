@@ -41,7 +41,7 @@ def load_and_clean(path: str, label: str) -> pd.DataFrame:
     df["queries_raw"] = df.get("queries_learning", pd.Series([None]*len(df)))
     df["validity_raw"] = df.get("validity_query", pd.Series([None]*len(df)))
     # keep only rows that succeeded and have a numeric measurement (this is the 'succeeded' check)
-    df["is_success"] = df.apply(lambda r: (r["automaton_size_num"] != 0) and to_bool(r["succeeded_raw"]) and pd.notna(r["time_raw"]) and str(r["time_raw"]).strip() != "" and float(r["time_raw"]) < 200, axis=1)
+    df["is_success"] = df.apply(lambda r: (r["automaton_size_num"] != 0) and pd.notna(r["time_raw"]) and str(r["time_raw"]).strip() != "" and float(r["time_raw"]) < 200, axis=1)
     df = df[df["is_success"]].copy()
     if df.empty:
         return pd.DataFrame()
@@ -65,7 +65,7 @@ def load_and_clean2(path: str, label: str) -> pd.DataFrame:
     df["queries_raw"] = df.get("queries_learning", pd.Series([None]*len(df)))
     df["validity_raw"] = df.get("validity_query", pd.Series([None]*len(df)))
     # keep only rows that succeeded and have a numeric measurement (this is the 'succeeded' check)
-    df["is_success"] = df.apply(lambda r: (r["automaton_size_num"] != 0) and pd.notna(r["time_raw"]) and str(r["time_raw"]).strip() != "TIMEOUT" and float(r["time_raw"]) < 200, axis=1)
+    df["is_success"] = df.apply(lambda r: (r["automaton_size_num"] == 25 and pd.notna(r["time_raw"]) and str(r["time_raw"]).strip() != "TIMEOUT" and float(r["time_raw"]) < 200), axis=1)
     df = df[df["is_success"]].copy()
     if df.empty:
         return pd.DataFrame()
@@ -101,6 +101,30 @@ def main():
 
     a = a[a["file name"].isin(common_files)].copy()
     b = b[b["file name"].isin(common_files)].copy()
+
+    # Align by both file name and suffix to compute pairwise comparisons
+    merged = pd.merge(a, b, on=["file name", "suffix_int"], suffixes=("_a", "_b"))
+    if merged.empty:
+        print("No matching (file name, suffix) pairs to compare.")
+        return
+
+    merged["total_time_num_a"] = merged["total_time_num_a"].astype(float)
+    merged["total_time_num_b"] = merged["total_time_num_b"].astype(float)
+
+    mean_a = merged["total_time_num_a"].mean()
+    mean_b = merged["total_time_num_b"].mean()
+
+    if pd.isna(mean_a) or pd.isna(mean_b):
+        print("Could not compute means for comparison.")
+    else:
+        if mean_a == 0:
+            print("Mean for A is zero, cannot compute percentage improvement.")
+        else:
+            improvement_pct = (mean_a - mean_b) / mean_a * 100.0
+            # Positive improvement_pct means B is better (lower) on average
+            print(f"Compared across {len(merged)} matched benchmarks:")
+            print(f"Mean A: {mean_a:.2f}, Mean B: {mean_b:.2f}")
+            print(f"Benchmark B is better than A by {improvement_pct:.2f}% on average")
 
     # unified suffix order so boxes align (suffixes come from the common subset)
     suffix_order = sorted(set(a["suffix_int"].unique()).union(set(b["suffix_int"].unique())))
@@ -168,7 +192,7 @@ def main():
     ax.set_xlabel("Benchmark")
     ax.set_ylabel("Membership Queries")
     # ax.set_title("Comparison of Basis Replacement (only benchmarks succeeded in both files)")
-    ax.set_yscale("log")
+    # ax.set_yscale("log")
     ax.grid(True, linestyle="--", alpha=0.25)
 
     from matplotlib.patches import Patch

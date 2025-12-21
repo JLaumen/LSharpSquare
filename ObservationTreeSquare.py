@@ -426,7 +426,7 @@ class ObservationTreeSquare:
         """
         Extend the frontier self.size - len(self.guaranteed_basis) steps from the guaranteed basis
         """
-        length = self.size - len(self.guaranteed_basis) + 1
+        length = self.size - len(self.guaranteed_basis) + 3
         # length = 1
         # Loop over words of length 'length'
         for word in itertools.product(self.alphabet, repeat=length):
