@@ -38,7 +38,7 @@ def run(example, t_type):
     oracle = SystemDCOracleST(alphabet, sul, M, counter_examples_dict[example][t_type], walks_per_state=300,
                               walk_len=30, example=example, t_type=t_type)
     oracle = RandomWMethodEqOracle(alphabet, sul, counter_examples_dict[example][t_type], walks_per_state=300, walk_len=30)
-    oracle = WpMethodEqOracle(alphabet, sul, counter_examples_dict[example][t_type])
+    # oracle = WpMethodEqOracle(alphabet, sul, counter_examples_dict[example][t_type])
     #oracle = RandomWalkEqOracle(alphabet, sul)
     #oracle = RandomWordEqOracle(alphabet, sul)
 
