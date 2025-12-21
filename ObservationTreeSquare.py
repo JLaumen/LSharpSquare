@@ -16,7 +16,7 @@ from aalpy.automata import Dfa, DfaState
 
 
 test_cases_path = "Benchmarking/incomplete_dfa_benchmark/test_cases/"
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format=f"%(asctime)s %(levelname)s: %(message)s",
                     datefmt="%H:%M:%S")
 
