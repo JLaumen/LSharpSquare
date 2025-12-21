@@ -2,9 +2,11 @@ import time
 
 from aalpy.base import Oracle
 from aalpy.base import SUL
+
 from ObservationTreeSquare import ObservationTreeSquare
 
 timeout = 20000
+
 
 def run_lsharp_square(alphabet: list,
                       sul: SUL,
@@ -16,7 +18,6 @@ def run_lsharp_square(alphabet: list,
                       use_compatibility: bool = False):
     if cache_and_non_det_check:
         # Wrap the sul in the CacheSUL, so that all steps/queries are cached
-
 
         eq_oracle.sul = sul
 
@@ -43,20 +44,21 @@ def run_lsharp_square(alphabet: list,
 
         # Pose Equivalence Query
         eq_query_start = time.time()
-        cex = eq_oracle.find_cex(hypothesis)
+        cexs = eq_oracle.find_cex(hypothesis)
         eq_query_time += time.time() - eq_query_start
         validity_queries += 1
 
-        if cex is None:
+        if not cexs:
             break
         # Get the output of the hypothesis for the cex
-        hypothesis.reset_to_initial()
-        last = hypothesis.step(None)
-        for letter in cex:
-            last = hypothesis.step(letter)
+        for cex in cexs:
+            hypothesis.reset_to_initial()
+            last = hypothesis.step(None)
+            for letter in cex:
+                last = hypothesis.step(letter)
 
-        # Process the counterexample and start a new learning round
-        ob_tree.process_counter_example(cex, not last)
+            # Process the counterexample and start a new learning round
+            ob_tree.process_counter_example(cex, not last)
 
     total_time = time.time() - start_time
     smt_time = ob_tree.smt_time

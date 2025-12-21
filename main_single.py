@@ -1,29 +1,32 @@
-from algorithm import learn
-from fa_learner import FALearner
-from dfa3_encoder import DFA3Encoder
-from rpni_learner import RPNILearner
-from aalpy.utils import make_input_complete, load_automaton_from_file
-from rc_lstar import run_Lstar
-import time
-from system_dc_sul_s_t import SystemDCSULST
-from system_dc_oracle_s_t import SystemDCOracleST
-from complete_dfa_oracle import CompleteDFAOracle
-from copy import deepcopy
-from aalpy.base.SUL import CacheSUL
-from rers_sul_s_t import RERSSULST
-from data.counter_examples import counter_examples_dict
-from multiprocessing import Process, Queue
 import random
+import time
+from copy import deepcopy
+
+from aalpy.base.SUL import CacheSUL
+from aalpy.utils import make_input_complete, load_automaton_from_file
+from algorithm import learn
+from complete_dfa_oracle import CompleteDFAOracle
+from data.counter_examples import counter_examples_dict
+from dfa3_encoder import DFA3Encoder
+from fa_learner import FALearner
+from rc_lstar import run_Lstar
+from rers_sul_s_t import RERSSULST
+from rpni_learner import RPNILearner
+from system_dc_oracle_s_t import SystemDCOracleST
+
+from LSharpSquare import run_lsharp_square
 # from RandomWalkEquOracly import RandomWalkEqOracle
 from Oracle import RandomWMethodEqOracle
-from LSharpSquare import run_lsharp_square
+from Oracle2 import WpMethodEqOracle
+from system_dc_sul_s_t import SystemDCSULST
+
+
 # from RandomWordEqOracle import RandomWordEqOracle
-from WPOracle import WpMethodEqOracle
 
 
 def run(example, t_type):
     # T2 update
-    M = load_automaton_from_file(f'data/{example}/T{t_type}.dot', automaton_type='dfa') #
+    M = load_automaton_from_file(f'data/{example}/T{t_type}.dot', automaton_type='dfa')  #
     make_input_complete(M, missing_transition_go_to="sink_state")
 
     # # T2 update
@@ -37,20 +40,20 @@ def run(example, t_type):
     # print(B.execute_sequence(B.initial_state, ('C', 'C', 'B', 'D', 'C', 'C', 'C', 'B', 'D', 'C', 'B', 'D')))
     oracle = SystemDCOracleST(alphabet, sul, M, counter_examples_dict[example][t_type], walks_per_state=300,
                               walk_len=30, example=example, t_type=t_type)
-    oracle = RandomWMethodEqOracle(alphabet, sul, counter_examples_dict[example][t_type], walks_per_state=300, walk_len=30)
-    # oracle = WpMethodEqOracle(alphabet, sul, counter_examples_dict[example][t_type])
-    #oracle = RandomWalkEqOracle(alphabet, sul)
-    #oracle = RandomWordEqOracle(alphabet, sul)
+    oracle = RandomWMethodEqOracle(alphabet, sul, counter_examples_dict[example][t_type], walks_per_state=10000,
+                                   walk_len=5)
+    oracle = WpMethodEqOracle(alphabet, sul, max_number_of_states=6, traces=counter_examples_dict[example][t_type])
+    # oracle = RandomWalkEqOracle(alphabet, sul)
+    # oracle = RandomWordEqOracle(alphabet, sul)
 
     start_time = int(time.time() * 1000) / 1000
     dfa3, data = run_lsharp_square(alphabet,
-                           sul,
-                           oracle,
-                           cache_and_non_det_check=False,
-                           return_data=True)
+                                   sul,
+                                   oracle,
+                                   cache_and_non_det_check=False,
+                                   return_data=True)
     print(dfa3)
     print(int(time.time() * 1000) / 1000 - start_time)
-
 
     data["ce_length"] = len(counter_examples_dict[example][t_type][0][1])
     data["alphabet_size"] = len(alphabet)
@@ -61,7 +64,6 @@ def run(example, t_type):
     data["system_steps_knowing_s"] = system_sul.sul.system_steps_knowing_s
     data["system_inits_knowing_s"] = system_sul.sul.system_inits_knowing_s
     return dfa3, data, M, []
-
 
 
 def main_single(benchmark, t_type, method, description_type, early_detection):
@@ -99,7 +101,6 @@ def main_single(benchmark, t_type, method, description_type, early_detection):
                 # print(dfa)
                 rpni_results[(description_type, early_detection)] = (end_time - start_time, len(dfa.states))
 
-    from aalpy.utils import load_automaton_from_file
     from aalpy.automata import Dfa, DfaState
     from utils import minimize_dfa
 
@@ -119,7 +120,6 @@ def main_single(benchmark, t_type, method, description_type, early_detection):
 
     t_s = moore_to_dfa(dfa3, "+-")
     t_s = minimize_dfa(t_s)
-
 
     # add to dict instead of printing
     results = {}
@@ -149,10 +149,14 @@ def main_single(benchmark, t_type, method, description_type, early_detection):
     results["L* time"] += max_time
 
     if t_type == "1":
-        results = { col_name:results[col_name] for col_name in ["benchmark", "ce_length", "alphabet_size", "3DFA", "L* time", "FE_DFA", "B_size"]}
+        results = {col_name: results[col_name] for col_name in
+                   ["benchmark", "ce_length", "alphabet_size", "3DFA", "L* time", "FE_DFA", "B_size"]}
     elif t_type == "2":
-        results = { col_name:results[col_name] for col_name in ["benchmark", "ce_length", "alphabet_size", "T_size", "3DFA", "L* time", "FE_DFA", "FE_ED_DFA", "B_size"]}
+        results = {col_name: results[col_name] for col_name in
+                   ["benchmark", "ce_length", "alphabet_size", "T_size", "3DFA", "L* time", "FE_DFA", "FE_ED_DFA",
+                    "B_size"]}
     else:
-        results = {col_name: results[col_name] for col_name in ["benchmark", "ce_length", "alphabet_size", "3DFA", "L* time", "FE_DFA", "RC_DFA", "B_size"]}
+        results = {col_name: results[col_name] for col_name in
+                   ["benchmark", "ce_length", "alphabet_size", "3DFA", "L* time", "FE_DFA", "RC_DFA", "B_size"]}
 
     return results

@@ -1,9 +1,9 @@
-import datetime
 import itertools
 import logging
 import time
 from collections import deque
 
+from aalpy.automata import Dfa, DfaState
 from pysmt.exceptions import SolverReturnedUnknownResultError
 from pysmt.shortcuts import (
     Solver, Symbol, Function, Int, Bool, Or, GE, LT
@@ -12,8 +12,6 @@ from pysmt.typing import INT, BOOL, FunctionType
 
 from Apartness import Apartness
 from MooreNode import MooreNode
-from aalpy.automata import Dfa, DfaState
-
 
 test_cases_path = "Benchmarking/incomplete_dfa_benchmark/test_cases/"
 logging.basicConfig(level=logging.DEBUG,
@@ -64,6 +62,7 @@ class ObservationTreeSquare:
         Insert an observation into the tree using a sequence of inputs and their corresponding outputs.
         """
         node = self.root
+        inputs = inputs[:len(outputs)]
         for inp, output in zip(inputs, outputs):
             node = node.extend_and_get(inp, output)
             node.set_output(output)
@@ -200,6 +199,7 @@ class ObservationTreeSquare:
                 for node, candidates in self.frontier_to_basis_dict.items():
                     if not Apartness.states_are_incompatible(node, iso_frontier_node, self):
                         candidates.add(iso_frontier_node)
+                logging.debug(f"Updating partial basis to size {len(self.guaranteed_basis)}")
                 self.size = max(self.size, len(self.guaranteed_basis))
                 return True
 
@@ -228,7 +228,9 @@ class ObservationTreeSquare:
                         candidates.remove(candidate)
                     if not Apartness.states_are_incompatible(node, iso_frontier_node, self):
                         candidates.add(iso_frontier_node)
-                self.frontier_to_basis_dict[candidate] = {node for node in self.guaranteed_basis if not Apartness.states_are_incompatible(node, iso_frontier_node, self)}
+                self.frontier_to_basis_dict[candidate] = {node for node in self.guaranteed_basis if
+                                                          not Apartness.states_are_incompatible(node, iso_frontier_node,
+                                                                                                self)}
                 return True
         return False
 
@@ -417,6 +419,12 @@ class ObservationTreeSquare:
             if transition_mapping is not None:
                 hypothesis = self.construct_hypothesis(transition_mapping=transition_mapping,
                                                        output_mapping=output_mapping)
+                #                 for state1 in hypothesis.states:
+                #                     for a in self.alphabet:
+                #                         state2 = state1.transitions[a]
+                #                     state1.transitions[a] = hypothesis.initial_state
+                #                     if Apartness.compute_witness_in_tree_and_hypothesis_states(self, self.root, hypothesis.initial_state) is not None:
+                #                         state1.transitions[a] = state2
                 return hypothesis
             else:
                 self.size += 1
@@ -427,7 +435,7 @@ class ObservationTreeSquare:
         Extend the frontier self.size - len(self.guaranteed_basis) steps from the guaranteed basis
         """
         # length = self.size - len(self.guaranteed_basis) + 1
-        length = 3 if len(self.alphabet) < 20 else 2
+        length = 2
         # Loop over words of length 'length'
         for word in itertools.product(self.alphabet, repeat=length):
             for node in self.guaranteed_basis:
@@ -502,6 +510,8 @@ class ObservationTreeSquare:
                     outputs.append(new_output)
                     if new_output != "unknown":
                         queried = True
+                    else:
+                        return outputs, queried
                 else:
                     outputs.append(None)
             else:
@@ -511,6 +521,10 @@ class ObservationTreeSquare:
                     outputs.append(new_output)
                     if new_output != "unknown":
                         queried = True
+                    else:
+                        return outputs, queried
                 else:
                     outputs.append(current_node.output)
+                    if current_node.output == "unknown":
+                        return outputs, queried
         return outputs, queried

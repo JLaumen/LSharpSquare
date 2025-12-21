@@ -1,8 +1,8 @@
+from itertools import product
 from random import shuffle, choice, randint
 
 from aalpy.base.Oracle import Oracle
 from aalpy.base.SUL import SUL
-from itertools import product
 
 
 class WMethodEqOracle(Oracle):
@@ -109,7 +109,6 @@ class RandomWMethodEqOracle(Oracle):
             label = True if label == "+" else False
             if hypothesis.execute_sequence(hypothesis.initial_state, trace)[-1] != label:
                 return trace
-
 
         if not hypothesis.characterization_set:
             hypothesis.characterization_set = hypothesis.compute_characterization_set()
