@@ -1,0 +1,59 @@
+digraph {
+s0 [shape="circle" label="s0"];
+s1 [shape="circle" label="s1"];
+s2 [shape="circle" label="s2"];
+s3 [shape="circle" label="s3"];
+s4 [shape="circle" label="s4"];
+s5 [shape="circle" label="s5"];
+s2 -> s5 [label="ApplicationData/ConnectionClosed"]
+s2 -> s5 [label="ApplicationDataEmpty/Alert Fatal (Illegal parameter) & ConnectionClosed"]
+s2 -> s5 [label="ChangeCipherSpec/ConnectionClosed"]
+s2 -> s1 [label="ClientHelloRSA/ServerHello & Certificate & ServerHelloDone"]
+s2 -> s5 [label="ClientKeyExchange/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s2 -> s5 [label="EmptyCertificate/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s2 -> s5 [label="Finished/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s2 -> s5 [label="HeartbeatRequest/ConnectionClosed"]
+s0 -> s5 [label="ApplicationData/ApplicationDataApplicationDataApplicationDataApplicationDataApplicationDataApplicationData & ConnectionClosed"]
+s0 -> s0 [label="ApplicationDataEmpty/Empty"]
+s0 -> s5 [label="ChangeCipherSpec/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s0 -> s5 [label="ClientHelloRSA/Alert Fatal (Handshake failure) & ConnectionClosed"]
+s0 -> s5 [label="ClientKeyExchange/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s0 -> s5 [label="EmptyCertificate/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s0 -> s5 [label="Finished/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s0 -> s5 [label="HeartbeatRequest/ConnectionClosed"]
+s1 -> s5 [label="ApplicationData/ConnectionClosed"]
+s1 -> s5 [label="ApplicationDataEmpty/Alert Fatal (Illegal parameter) & ConnectionClosed"]
+s1 -> s5 [label="ChangeCipherSpec/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s1 -> s5 [label="ClientHelloRSA/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s1 -> s3 [label="ClientKeyExchange/Empty"]
+s1 -> s5 [label="EmptyCertificate/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s1 -> s5 [label="Finished/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s1 -> s5 [label="HeartbeatRequest/ConnectionClosed"]
+s3 -> s5 [label="ApplicationData/ConnectionClosed"]
+s3 -> s5 [label="ApplicationDataEmpty/Alert Fatal (Illegal parameter) & ConnectionClosed"]
+s3 -> s4 [label="ChangeCipherSpec/Empty"]
+s3 -> s5 [label="ClientHelloRSA/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s3 -> s5 [label="ClientKeyExchange/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s3 -> s5 [label="EmptyCertificate/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s3 -> s5 [label="Finished/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s3 -> s5 [label="HeartbeatRequest/ConnectionClosed"]
+s4 -> s5 [label="ApplicationData/ConnectionClosed"]
+s4 -> s5 [label="ApplicationDataEmpty/ConnectionClosed"]
+s4 -> s5 [label="ChangeCipherSpec/ConnectionClosed"]
+s4 -> s5 [label="ClientHelloRSA/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s4 -> s5 [label="ClientKeyExchange/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s4 -> s5 [label="EmptyCertificate/Alert Fatal (Unexpected message) & ConnectionClosed"]
+s4 -> s0 [label="Finished/ChangeCipherSpec & Finished"]
+s4 -> s5 [label="HeartbeatRequest/ConnectionClosed"]
+s5 -> s5 [label="ApplicationData/ConnectionClosed"]
+s5 -> s5 [label="ApplicationDataEmpty/ConnectionClosed"]
+s5 -> s5 [label="ChangeCipherSpec/ConnectionClosed"]
+s5 -> s5 [label="ClientHelloRSA/ConnectionClosed"]
+s5 -> s5 [label="ClientKeyExchange/ConnectionClosed"]
+s5 -> s5 [label="EmptyCertificate/ConnectionClosed"]
+s5 -> s5 [label="Finished/ConnectionClosed"]
+s5 -> s5 [label="HeartbeatRequest/ConnectionClosed"]
+
+__start0 [label="" shape="none"];
+__start0 -> s2;
+}

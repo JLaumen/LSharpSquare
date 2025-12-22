@@ -5,9 +5,9 @@ import numpy as np
 import seaborn as sns
 from pathlib import Path
 
-CSV_PATH_A = "benchmarking/results/nerode_benchmarks.csv"
-CSV_PATH_B = "benchmarking/results/benchmark2_t200_rTrue_cFalse_all.csv"
-OUT_PNG = "vs_validity.svg"
+CSV_PATH_A = "benchmarking/results/benchmark_t200_rTrue_cFalse_all.csv"
+CSV_PATH_B = "benchmarking/results/benchmark_t200_rTrue_cTrue_all.csv"
+OUT_PNG = "vs_comp.pdf"
 
 def to_bool(x):
     if pd.isna(x):
@@ -46,7 +46,7 @@ def load_and_clean(path: str, label: str) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
     df["suffix_x"] = df["file name"].apply(parse_suffix_to_int)
-    df["total_time_num"] = pd.to_numeric(df.get("validity_query", pd.Series([None]*len(df))), errors="coerce")
+    df["total_time_num"] = pd.to_numeric(df.get("queries_learning", pd.Series([None]*len(df))), errors="coerce")
     df = df.dropna(subset=["suffix_x", "total_time_num"]).copy()
     if df.empty:
         return pd.DataFrame()
@@ -166,17 +166,17 @@ def main():
     ax.set_xticks(x)
     ax.set_xticklabels([str(s) for s in suffix_order])
     ax.set_xlabel("Benchmark")
-    ax.set_ylabel("Validity Queries")
+    ax.set_ylabel("Membership Queries")
     # ax.set_title("Comparison of Basis Replacement (only benchmarks succeeded in both files)")
-    # ax.set_yscale("log")
+    ax.set_yscale("log")
     ax.grid(True, linestyle="--", alpha=0.25)
 
     from matplotlib.patches import Patch
     legend_handles = []
     if any(counts_a):
-        legend_handles.append(Patch(facecolor=sns_palette[0], edgecolor="#444444", label="L*☐"))
+        legend_handles.append(Patch(facecolor=sns_palette[0], edgecolor="#444444", label="Using apartness"))
     if any(counts_b):
-        legend_handles.append(Patch(facecolor=sns_palette[1], edgecolor="#444444", label="L#☐"))
+        legend_handles.append(Patch(facecolor=sns_palette[1], edgecolor="#444444", label="Using compatibility"))
     if legend_handles:
         ax.legend(handles=legend_handles, loc="upper left")
 

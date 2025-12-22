@@ -2,7 +2,10 @@ import concurrent.futures
 import datetime
 import logging
 import os
+import random
 from typing import Any
+
+import aalpy
 
 from IncompleteDfaSUL import IncompleteDfaSUL
 from LSharpSquare import run_lsharp_square
@@ -162,6 +165,40 @@ def run_test_cases_pool(file: str, extension: str, solver_timeout, replace_basis
             for row in results:
                 f.write(row)
 
+def run_mealy_benchmarks(file: str, number_missing: int, solver_timeout, replace_basis, use_compatibility) -> None:
+    from MealyDfaSUL import MealyDfaSUL
+    from Oracle import WpMethodEqOracle
+    mealy = aalpy.load_automaton_from_file(file, automaton_type="mealy")
+    # missing = set()
+    # while len(missing) < number_missing:
+    #     state = random.choice(mealy.states)
+    #     if len(state.transitions) == 0:
+    #         continue
+    #     transitions = state.transitions
+    #     state2 = random.choice(list(transitions.values()))
+    #     transitions2 = state2.transitions
+    #     state3 = random.choice(list(transitions2.values()))
+    #     missing.add((state, state2, state3))
+    # Make a list of all triples of subsequent states:
+    triples = []
+    for state1 in mealy.states:
+        for input1, state2 in state1.transitions.items():
+            for input2, state3 in state2.transitions.items():
+                triples.append((state1, input1, input2))
+    missing = random.sample(triples, min(number_missing, len(triples)))
+
+    sul = MealyDfaSUL(mealy, list(missing))
+    input_alphabet = mealy.get_input_alphabet()
+    output_alphabet = set()
+    for state in mealy.states:
+        for output in state.output_fun.values():
+            output_alphabet.add(output)
+    alphabet = list(set(input_alphabet + list(output_alphabet)))
+    oracle = WpMethodEqOracle(alphabet, sul, 10)
+    learned_mealy, info = run_lsharp_square(alphabet, sul, oracle, return_data=True, solver_timeout=solver_timeout, replace_basis=replace_basis, use_compatibility=use_compatibility)
+    print(learned_mealy)
+
+
 
 def main() -> None:
     # test_random_dfa(50, 0.9, ["a", "b"])
@@ -169,7 +206,8 @@ def main() -> None:
     replace_basis = True
     use_compatibility = False
     # run_test_case_horizon_increase("SnL-milton-16.txt", solver_timeout, replace_basis, use_compatibility, max_horizon=17)
-    run_test_cases_pool("all", f"2_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
+    # run_test_cases_pool("all", f"2_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
+    run_mealy_benchmarks("benchmarking/models/GnuTLS_3.3.8_client_regular.dot", 25, solver_timeout, replace_basis, use_compatibility)
 
     # solver_timeout = 200
     # replace_basis = False

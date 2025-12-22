@@ -16,7 +16,7 @@ from aalpy.automata import Dfa, DfaState
 
 
 test_cases_path = "Benchmarking/incomplete_dfa_benchmark/test_cases/"
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format=f"%(asctime)s %(levelname)s: %(message)s",
                     datefmt="%H:%M:%S")
 
@@ -200,6 +200,7 @@ class ObservationTreeSquare:
                 for node, candidates in self.frontier_to_basis_dict.items():
                     if not Apartness.states_are_incompatible(node, iso_frontier_node, self):
                         candidates.add(iso_frontier_node)
+                logging.debug(f"Increasing basis size to {len(self.guaranteed_basis)}")
                 self.size = max(self.size, len(self.guaranteed_basis))
                 return True
 
@@ -426,8 +427,8 @@ class ObservationTreeSquare:
         """
         Extend the frontier self.size - len(self.guaranteed_basis) steps from the guaranteed basis
         """
-        length = self.size - len(self.guaranteed_basis) + 3
-        # length = 1
+        # length = self.size - len(self.guaranteed_basis) + 3
+        length = 2
         # Loop over words of length 'length'
         for word in itertools.product(self.alphabet, repeat=length):
             for node in self.guaranteed_basis:
