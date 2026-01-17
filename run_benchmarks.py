@@ -166,7 +166,6 @@ def main() -> None:
     solver_timeout = 3600
     replace_basis = True
     use_compatibility = True
-    # run_test_case_horizon_increase("SnL-milton-16.txt", solver_timeout, replace_basis, use_compatibility, max_horizon=17)
     run_test_cases_pool("all", f"3_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout,
                         replace_basis, use_compatibility)
     # models_folder = "benchmarking/models"
