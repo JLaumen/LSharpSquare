@@ -1,14 +1,15 @@
-from CacheTree import CacheTree
 from aalpy.automata import Dfa
 from aalpy.base.SUL import SUL
-from random import random
+
+from CacheTree import CacheTree
 
 
 class DfaSUL(SUL):
     def __init__(self, automaton: Dfa):
         super().__init__()
+        self.last_output = None
         self.automaton: Dfa = automaton
-        self.num_unsuccesful_queries = 0
+        self.num_unsuccessful_queries = 0
 
     def pre(self):
         self.automaton.reset_to_initial()
@@ -35,34 +36,29 @@ class DfaSUL(SUL):
 
         """
         self.pre()
-        # Empty string for DFA
         for letter in word:
             self.step(letter)
         out = self.post()
-        # print("query:", word, out)
         self.num_queries += 1
         self.num_steps += len(word)
         if out == "unknown":
-            self.num_unsuccesful_queries += 1
+            self.num_unsuccessful_queries += 1
         return out
 
 
 class IncompleteDfaSUL(DfaSUL):
-
-    def __init__(self, words: list = [()], automaton: Dfa = None, fractionKnown=0):
+    def __init__(self, words, automaton: Dfa = None):
         super().__init__(automaton)
+        self.input_walk = None
         self.cache = CacheTree()
 
         for word, output in words:
             self.add_word(word, output)
         for word, output in words:
             if self.word_known(word) != output:
-                print(word, ":", output, "is known as", self.word_known(word))
-        # self.words = words
-        self.fractionKnown = fractionKnown
+                raise Exception(f"Word {word} with output {output} inconsistent with cache")
 
     def add_word(self, word, output):
-        # print("add word", word, output)
         self.cache.reset()
         for index in range(len(word)):
             input_val = word[index]
@@ -75,15 +71,9 @@ class IncompleteDfaSUL(DfaSUL):
             return outputs
         else:
             return outputs[-1]
-        # print(word)
-        # print(outputs)
-        '''for word2, output2 in self.words:
-            if word2 == word:
-                return output2
-        return None'''
 
     def pre(self):
-        self.inputWalk = []
+        self.input_walk = []
         if self.automaton is None:
             self.last_output = "unknown"
         else:
@@ -91,22 +81,20 @@ class IncompleteDfaSUL(DfaSUL):
             self.last_output = self.automaton.step(None)
 
     def step(self, letter=None):
-        self.inputWalk.append(letter)
+        self.input_walk.append(letter)
         if self.automaton is None:
             self.last_output = "unknown"
         else:
             self.last_output = self.automaton.step(letter)
 
     def post(self):
-        saved_output = self.word_known(self.inputWalk)
+        saved_output = self.word_known(self.input_walk)
         if saved_output is None:
-            if random() < self.fractionKnown and not self.automaton is None:
-                # self.words.append((self.inputWalk.copy(), self.last_output))
-                self.add_word(self.inputWalk, self.last_output)
+            if not self.automaton is None:
+                self.add_word(self.input_walk, self.last_output)
                 return self.last_output
             else:
-                # self.words.append((self.inputWalk.copy(), "unknown"))
-                self.add_word(self.inputWalk, "unknown")
+                self.add_word(self.input_walk, "unknown")
                 return "unknown"
         else:
             return saved_output

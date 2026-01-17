@@ -13,7 +13,6 @@ class Node(object):
         return result
 
 
-
 class CacheTree:
     """
     Tree in which all membership queries and corresponding outputs/values are stored. Membership queries update the tree
@@ -69,7 +68,6 @@ class CacheTree:
                 raise SystemExit(msg)
             else:
                 if not out is None:
-                    #print(node.value, "set to", out)
                     node.value = out
         self.curr_node = node
 
@@ -89,7 +87,7 @@ class CacheTree:
         """
         curr_node = self.root_node
 
-        if len(input_seq)==0:
+        if len(input_seq) == 0:
             return self.root_node.value
 
         output_seq = ()
@@ -99,7 +97,7 @@ class CacheTree:
                 output_seq += (curr_node.value,)
             else:
                 return None
-        #print('found')
+
         return output_seq
 
     def add_to_cache(self, input_sequence, output_sequence):
@@ -158,6 +156,8 @@ class CacheDict:
                       f'Received output: {received_seq}'
                 raise SystemExit(msg)
 
+        return None
+
     def in_cache(self, input_seq: tuple):
         """
         Check if the result of the membership query for input_seq is cached is in the tree. If it is, return the
@@ -181,7 +181,7 @@ class CacheDict:
         Add input-output sequence to cache
         """
         for i in range(1, len(input_sequence) + 1):
-            self.cache_dict[input_sequence[:i]] = output_sequence[i-1]
+            self.cache_dict[input_sequence[:i]] = output_sequence[i - 1]
 
     def get_output_sequence(self, input_seq):
         return tuple(self.cache_dict[input_seq[:i]] for i in range(1, len(input_seq) + 1))

@@ -7,6 +7,7 @@ class ValidityDataOracle(Oracle):
         """
         Give data in format: [(["a", "b"], True), (["b", "a", "a"], False)]
         """
+        super().__init__(None, None)
         self.data = data
         self.num_queries = 0
         self.num_steps = 0

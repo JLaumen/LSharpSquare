@@ -1,7 +1,8 @@
 import random
+from itertools import chain, product
+
 from aalpy.base.Oracle import Oracle
 from aalpy.base.SUL import SUL
-from itertools import chain, product
 
 
 def state_characterization_set(hypothesis, alphabet, state):
@@ -77,11 +78,7 @@ class WpMethodEqOracle(Oracle):
         if not hypothesis.characterization_set:
             hypothesis.characterization_set = hypothesis.compute_characterization_set()
 
-        transition_cover = set(
-            state.prefix + (letter,)
-            for state in hypothesis.states
-            for letter in self.alphabet
-        )
+        transition_cover = set(state.prefix + (letter,) for state in hypothesis.states for letter in self.alphabet)
 
         state_cover = set(state.prefix for state in hypothesis.states)
         difference = transition_cover.difference(state_cover)
@@ -125,8 +122,7 @@ class RandomWpMethodEqOracle(Oracle):
         3) sample a word from the set of suffixes / state identifiers
     """
 
-    def __init__(
-        self, alphabet: list, sul: SUL, min_length=1, expected_length=10, num_tests=1000,):
+    def __init__(self, alphabet: list, sul: SUL, min_length=1, expected_length=10, num_tests=1000, ):
         super().__init__(alphabet, sul)
         self.min_length = min_length
         self.expected_length = expected_length
@@ -138,36 +134,36 @@ class RandomWpMethodEqOracle(Oracle):
         if not hypothesis.characterization_set:
             hypothesis.characterization_set = [(a,) for a in hypothesis.get_input_alphabet()]
 
-        state_mapping = {s : state_characterization_set(hypothesis, self.alphabet, s) for s in hypothesis.states}
+        state_mapping = {s: state_characterization_set(hypothesis, self.alphabet, s) for s in hypothesis.states}
 
         for _ in range(self.bound):
             state = random.choice(hypothesis.states)
-            input = state.prefix
+            inp = state.prefix
             limit = self.min_length
             while limit > 0 or random.random() > 1 / (self.expected_length + 1):
                 letter = random.choice(self.alphabet)
-                input += (letter,)
+                inp += (letter,)
                 limit -= 1
             if random.random() > 0.5:
                 # global suffix with characterization_set
-                input += random.choice(hypothesis.characterization_set)
+                inp += random.choice(hypothesis.characterization_set)
             else:
                 # local suffix
-                _ = hypothesis.execute_sequence(hypothesis.initial_state, input)
+                _ = hypothesis.execute_sequence(hypothesis.initial_state, inp)
                 if state_mapping[hypothesis.current_state]:
-                    input += random.choice(state_mapping[hypothesis.current_state])
+                    inp += random.choice(state_mapping[hypothesis.current_state])
                 else:
                     continue
 
             self.reset_hyp_and_sul(hypothesis)
-            for ind, letter in enumerate(input):
+            for ind, letter in enumerate(inp):
                 out_hyp = hypothesis.step(letter)
                 out_sul = self.sul.step(letter)
                 self.num_steps += 1
 
                 if out_hyp != out_sul and out_sul != "unknown":
                     self.sul.post()
-                    return input[: ind + 1]
+                    return inp[: ind + 1]
 
             self.sul.post()
 

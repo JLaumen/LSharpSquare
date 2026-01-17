@@ -1,37 +1,36 @@
 import time
-
 from aalpy.base import Oracle
 from aalpy.base import SUL
 from ObservationTreeSquare import ObservationTreeSquare
 
-timeout = 200
-
 def run_lsharp_square(alphabet: list,
                       sul: SUL,
                       eq_oracle: Oracle,
-                      cache_and_non_det_check: bool = True,
                       return_data: bool = False,
                       solver_timeout: int = 200,
                       replace_basis: bool = True,
                       use_compatibility: bool = False):
-    if cache_and_non_det_check:
-        # Wrap the sul in the CacheSUL, so that all steps/queries are cached
 
-
-        eq_oracle.sul = sul
 
     ob_tree = ObservationTreeSquare(alphabet, sul, solver_timeout, replace_basis, use_compatibility)
     start_time = time.time()
+    timeout = solver_timeout
 
     eq_query_time = 0
     learning_rounds = 0
     validity_queries = 0
     hypothesis = None
 
+    # ob_tree.insert_observation_sequence(["1","0","1","0", "0"], [False] * 5)
+    # ob_tree.insert_observation([], False)
+    # ob_tree.insert_observation(["0"], True)
+    # from Apartness import Apartness
+    # print(Apartness.states_are_incompatible(ob_tree.root, ob_tree.get_successor(["1", "0"]), ob_tree))
+    # exit()
+
     while True:
         learning_rounds += 1
 
-        # Limit to one hour
         if time.time() - start_time > timeout:
             break
 

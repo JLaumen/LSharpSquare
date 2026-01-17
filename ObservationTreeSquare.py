@@ -1,24 +1,18 @@
-import datetime
 import itertools
 import logging
 import time
 from collections import deque
 
+from aalpy.automata import Dfa, DfaState
 from pysmt.exceptions import SolverReturnedUnknownResultError
-from pysmt.shortcuts import (
-    Solver, Symbol, Function, Int, Bool, Or, GE, LT
-)
+from pysmt.shortcuts import (Solver, Symbol, Function, Int, Bool, Or, GE, LT)
 from pysmt.typing import INT, BOOL, FunctionType
 
 from Apartness import Apartness
 from MooreNode import MooreNode
-from aalpy.automata import Dfa, DfaState
-
 
 test_cases_path = "Benchmarking/incomplete_dfa_benchmark/test_cases/"
-logging.basicConfig(level=logging.DEBUG,
-                    format=f"%(asctime)s %(levelname)s: %(message)s",
-                    datefmt="%H:%M:%S")
+logging.basicConfig(level=logging.INFO, format=f"%(asctime)s %(levelname)s: %(message)s", datefmt="%H:%M:%S")
 
 
 class ObservationTreeSquare:
@@ -47,8 +41,6 @@ class ObservationTreeSquare:
         self.size = 1
         self.guaranteed_basis = [self.root]
         self.frontier_to_basis_dict = dict()
-
-        # self.apartness_cache = set()
 
     def insert_observation(self, inputs, output):
         """
@@ -219,7 +211,6 @@ class ObservationTreeSquare:
                 candidate = next(iter(self.frontier_to_basis_dict[iso_frontier_node]))
                 if len(self.get_access_sequence(candidate)) <= len(self.get_access_sequence(iso_frontier_node)):
                     continue
-                # print(f"Replacing length {len(self.get_access_sequence(candidate))} access sequence with length {len(self.get_access_sequence(iso_frontier_node))}")
                 self.guaranteed_basis.remove(candidate)
                 self.guaranteed_basis.append(iso_frontier_node)
                 # Update the candidates
@@ -229,7 +220,9 @@ class ObservationTreeSquare:
                         candidates.remove(candidate)
                     if not Apartness.states_are_incompatible(node, iso_frontier_node, self):
                         candidates.add(iso_frontier_node)
-                self.frontier_to_basis_dict[candidate] = {node for node in self.guaranteed_basis if not Apartness.states_are_incompatible(node, iso_frontier_node, self)}
+                self.frontier_to_basis_dict[candidate] = {node for node in self.guaranteed_basis if
+                                                          not Apartness.states_are_incompatible(node, iso_frontier_node,
+                                                                                                self)}
                 return True
         return False
 
@@ -244,8 +237,6 @@ class ObservationTreeSquare:
                 while self.identify_frontier(frontier_node):
                     extended = True
                     self.update_basis_candidates(frontier_node)
-                #     print(len(self.frontier_to_basis_dict[frontier_node]))
-                # print("Done with node")
         return extended
 
     def identify_frontier(self, frontier_node):
@@ -257,7 +248,6 @@ class ObservationTreeSquare:
 
         inputs_to_frontier = self.get_transfer_sequence(self.root, frontier_node)
 
-        out_extended = False
         witnesses = self._get_witnesses_bfs(frontier_node)
         for witness_seq in witnesses:
             inputs = inputs_to_frontier + witness_seq
@@ -336,16 +326,13 @@ class ObservationTreeSquare:
                 if not successor.leads_to_known:
                     continue
                 queue.append(successor)
-                s.add_assertion(
-                    Function(states_mapping, [Int(len(nodes))]).Equals(
-                        Function(delta, [Function(states_mapping, [Int(idx)]), Int(self.alphabet.index(letter))]))
-                )
+                s.add_assertion(Function(states_mapping, [Int(len(nodes))]).Equals(
+                    Function(delta, [Function(states_mapping, [Int(idx)]), Int(self.alphabet.index(letter))])))
                 nodes.append(successor)
 
         # Basis nodes map to different states
         for i, node in enumerate(self.guaranteed_basis):
             s.add_assertion(Function(states_mapping, [Int(nodes.index(node))]).Equals(Int(i)))
-            # break
 
         # Force known outputs
         for i, node in enumerate(nodes):
@@ -354,14 +341,12 @@ class ObservationTreeSquare:
                 s.add_assertion(Function(dfa_output, [Function(states_mapping, [Int(i)])]).Iff(val))
 
         for node, candidates in self.frontier_to_basis_dict.items():
-            # break
             if node not in nodes:
                 continue
-            s.add_assertion(Or([
-                                   Function(states_mapping, [Int(nodes.index(node))]).Equals(
-                                       Int(self.guaranteed_basis.index(c))) for c in candidates] +
-                               [Function(states_mapping, [Int(nodes.index(node))]).Equals(Int(i)) for i in
-                                range(len(self.guaranteed_basis), self.size)]))
+            s.add_assertion(
+                Or([Function(states_mapping, [Int(nodes.index(node))]).Equals(Int(self.guaranteed_basis.index(c))) for c
+                       in candidates] + [Function(states_mapping, [Int(nodes.index(node))]).Equals(Int(i)) for i in
+                                         range(len(self.guaranteed_basis), self.size)]))
 
         # Correct delta
         for i in range(self.size):
@@ -369,15 +354,6 @@ class ObservationTreeSquare:
                 d_ij = Function(delta, [Int(i), Int(j)])
                 s.add_assertion(GE(d_ij, Int(0)))
                 s.add_assertion(LT(d_ij, Int(self.size)))
-
-        # Fix known delta transitions for basis to basis nodes
-        # for i, node in enumerate(self.basis):
-        #     for letter, successor in node.successors.items():
-        #         if successor in self.basis:
-        #             s.add_assertion(
-        #                 Function(delta, [Int(i), Int(self.alphabet.index(letter))]) \
-        #                     .Equals(Int(self.basis.index(successor)))
-        #             )
 
         try:
             logging.debug("Solving...")
@@ -438,7 +414,6 @@ class ObservationTreeSquare:
                 self.insert_observation_sequence(inputs, outputs)
 
     def update_frontier(self):
-        # self.extend_frontier()
         self.update_frontier_to_basis_dict()
 
     def find_adequate_observation_tree(self):
@@ -463,24 +438,10 @@ class ObservationTreeSquare:
         Inserts the counter example into the observation tree and searches for the
         input-output sequence which is different
         """
-        # self.insert_observation(cex_inputs, cex_outputs)
         cex_outputs, _ = self._get_output_sequence(cex_inputs, query_mode="full")
         self.insert_observation_sequence(cex_inputs, cex_outputs)
         self.get_successor(cex_inputs).set_output(output)
-        # # Count how many steps the counterexample is away from the guaranteed basis
-        # node = self.get_successor(cex_inputs)
-        # steps_from_basis = 0
-        # while node not in self.guaranteed_basis and node is not None:
-        #     node = node.parent
-        #     steps_from_basis += 1
-        # print(f"Counterexample is {steps_from_basis} steps away from guaranteed basis")
         return
-        # hyp_outputs = hypothesis.compute_output_seq(
-        #     hypothesis.initial_state, cex_inputs)
-        # prefix_index = self._get_counter_example_prefix_index(
-        #     cex_outputs, hyp_outputs)
-        # self._process_linear_search(
-        #     hypothesis, cex_inputs[:prefix_index + 1], cex_outputs[:prefix_index + 1])
 
     def _get_output_sequence(self, inputs, query_mode="full"):
         """

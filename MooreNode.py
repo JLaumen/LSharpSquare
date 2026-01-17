@@ -51,11 +51,11 @@ class MooreNode:
         return self._id_counter
 
     def __str__(self):
-        compactCounterExamples = True
-        if compactCounterExamples and self.output == None and len(self.successors) == 1:
+        compact_counter_examples = True
+        if compact_counter_examples and self.output is None and len(self.successors) == 1:
             # skip printing this node and print the child instead.
-            succesor = list(self.successors.values())[0]
-            result = str(succesor)
+            successor = list(self.successors.values())[0]
+            result = str(successor)
             return result
         else:
             inputs = []
@@ -65,7 +65,7 @@ class MooreNode:
                 current_node = current_node.parent
 
             result = "node " + str(inputs) + " / " + str(self.output)
-            for input_val, succesor in self.successors.items():
+            for input_val, successor in self.successors.items():
                 result += "\n" + str(input_val) + ":\n"
-                result += "\t" + str(succesor).replace("\n", "\n\t")
+                result += "\t" + str(successor).replace("\n", "\n\t")
             return result
