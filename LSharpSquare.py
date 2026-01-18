@@ -21,12 +21,13 @@ def run_lsharp_square(alphabet: list,
     validity_queries = 0
     hypothesis = None
 
-    # ob_tree.insert_observation_sequence(["1","0","1","0", "0"], [False] * 5)
-    # ob_tree.insert_observation([], False)
-    # ob_tree.insert_observation(["0"], True)
-    # from Apartness import Apartness
-    # print(Apartness.states_are_incompatible(ob_tree.root, ob_tree.get_successor(["1", "0"]), ob_tree))
-    # exit()
+    ob_tree.insert_observation_sequence(["1","1","0"], [False] * 2 + [False])
+    ob_tree.insert_observation_sequence(["1","1","1","1","0"], [False] * 4 + [True])
+    ob_tree.insert_observation([], False)
+    # ob_tree.insert_observation_sequence(["0"], [True])
+    from Apartness import Apartness
+    print(Apartness.states_are_incompatible(ob_tree.root, ob_tree.get_successor(["1"]), ob_tree))
+    exit()
 
     while True:
         learning_rounds += 1

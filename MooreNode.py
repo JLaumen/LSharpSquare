@@ -9,7 +9,7 @@ class MooreNode:
         self.successors = {}
         self.parent = parent
         self.input_to_parent = None
-        self.access_sequence = None
+        self.access_sequence = []
         self.leads_to_known = False
 
     def __hash__(self):
@@ -30,6 +30,7 @@ class MooreNode:
         self.successors[input_val].parent = self
         self.successors[input_val].input_to_parent = input_val
         self.successors[input_val].set_output(output_val)
+        self.successors[input_val].access_sequence = self.access_sequence + [input_val]
 
     def get_successor(self, input_val):
         """ Returns the successor node for the given input """
