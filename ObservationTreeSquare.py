@@ -60,8 +60,7 @@ class ObservationTreeSquare:
             node = node.extend_and_get(inp, output)
             node.set_output(output)
             if not node in self.frontier_to_basis_dict:
-                candidates = {candidate for candidate in self.guaranteed_basis if
-                              not Apartness.states_are_incompatible(candidate, node, self)}
+                candidates = {candidate for candidate in self.guaranteed_basis}
                 self.frontier_to_basis_dict[node] = candidates
 
     def experiment(self, inputs):
@@ -142,7 +141,7 @@ class ObservationTreeSquare:
         count = 0
         while queue:
             node = queue.popleft()
-            if self.is_known(node):
+            if node.output != "unknown":
                 count += 1
             for successor in node.successors.values():
                 queue.append(successor)
@@ -190,8 +189,7 @@ class ObservationTreeSquare:
                 # Update the candidates
                 del self.frontier_to_basis_dict[iso_frontier_node]
                 for node, candidates in self.frontier_to_basis_dict.items():
-                    if not Apartness.states_are_incompatible(node, iso_frontier_node, self):
-                        candidates.add(iso_frontier_node)
+                    candidates.add(iso_frontier_node)
                 logging.debug(f"Increasing basis size to {len(self.guaranteed_basis)}")
                 self.size = max(self.size, len(self.guaranteed_basis))
                 return True
@@ -218,11 +216,9 @@ class ObservationTreeSquare:
                 for node, candidates in self.frontier_to_basis_dict.items():
                     if candidate in candidates:
                         candidates.remove(candidate)
-                    if not Apartness.states_are_incompatible(node, iso_frontier_node, self):
+                    if not Apartness.states_are_incompatible(node, iso_frontier_node, self, experiment=False):
                         candidates.add(iso_frontier_node)
-                self.frontier_to_basis_dict[candidate] = {node for node in self.guaranteed_basis if
-                                                          not Apartness.states_are_incompatible(node, iso_frontier_node,
-                                                                                                self)}
+                self.frontier_to_basis_dict[candidate] = {node for node in self.guaranteed_basis}
                 return True
         return False
 
@@ -421,17 +417,17 @@ class ObservationTreeSquare:
         Tries to find an observation tree,
         for which each frontier state is identified as much as possible.
         """
-        self.update_frontier_to_basis_dict()
-        self.expand_frontier()
+        # self.expand_frontier()
+        # self.update_frontier_to_basis_dict()
         while self.promote_node_to_basis():
-            self.update_frontier_to_basis_dict()
             self.expand_frontier()
+            self.update_frontier_to_basis_dict()
 
         while self.make_frontiers_identified():
             self.update_frontier_to_basis_dict()
             while self.promote_node_to_basis():
-                self.update_frontier_to_basis_dict()
                 self.expand_frontier()
+                self.update_frontier_to_basis_dict()
 
     def process_counter_example(self, cex_inputs, output):
         """
@@ -441,6 +437,7 @@ class ObservationTreeSquare:
         cex_outputs, _ = self._get_output_sequence(cex_inputs, query_mode="full")
         self.insert_observation_sequence(cex_inputs, cex_outputs)
         self.get_successor(cex_inputs).set_output(output)
+        self.update_frontier_to_basis_dict()
         return
 
     def _get_output_sequence(self, inputs, query_mode="full"):

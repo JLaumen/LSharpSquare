@@ -21,13 +21,18 @@ def run_lsharp_square(alphabet: list,
     validity_queries = 0
     hypothesis = None
 
-    ob_tree.insert_observation_sequence(["1","1","0"], [False] * 2 + [False])
-    ob_tree.insert_observation_sequence(["1","1","1","1","0"], [False] * 4 + [True])
-    ob_tree.insert_observation([], False)
+    ob_tree.expand_frontier()
+    ob_tree.update_frontier_to_basis_dict()
+
+    # ob_tree.insert_observation_sequence(["1","1","0"], [False] * 2 + [False])
+    # ob_tree.insert_observation_sequence(["1","1","1","1","0"], [False] * 4 + [False])
+    # ob_tree.insert_observation([], False)
     # ob_tree.insert_observation_sequence(["0"], [True])
-    from Apartness import Apartness
-    print(Apartness.states_are_incompatible(ob_tree.root, ob_tree.get_successor(["1"]), ob_tree))
-    exit()
+    # from Apartness import Apartness
+    # print(Apartness.states_are_apart(ob_tree.root, ob_tree.get_successor(["1"]), ob_tree))
+    # print(Apartness.states_are_incompatible(ob_tree.root, ob_tree.get_successor(["1"]), ob_tree))
+    # print(Apartness.states_are_apart(ob_tree.root, ob_tree.get_successor(["1"]), ob_tree))
+    # exit()
 
     while True:
         learning_rounds += 1
@@ -72,6 +77,7 @@ def run_lsharp_square(alphabet: list,
         'total_time': total_time,
         # learning algorithm
         'queries_learning': sul.num_queries,
+        'successful_queries_learning': sul.num_successful_queries,
         'validity_query': validity_queries,
         # tree
         'nodes': ob_tree.get_size(),

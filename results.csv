@@ -1,0 +1,1 @@
+file_name,missing_transitions,learning_rounds,automaton_size,learning_time,smt_time,eq_oracle_time,total_time,queries_learning,successful_queries_learning,validity_query,nodes,informative_nodes,sul_steps,cache_saved,queries_eq_oracle,steps_eq_oracle

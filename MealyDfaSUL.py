@@ -6,7 +6,7 @@ class MealyDfaSUL(SUL):
     def __init__(self, automaton: MealyMachine, missing: list):
         super().__init__()
         self.automaton: MealyMachine = automaton
-        self.num_unsuccessful_queries = 0
+        self.num_successful_queries = 0
         self.missing = set()
         extra_states = dict()
 
@@ -54,6 +54,7 @@ class MealyDfaSUL(SUL):
         """
         self.pre()
         self.num_queries += 1
+        self.num_successful_queries += 1
         self.num_steps += len(word)
 
         if len(word) % 2 == 1:
@@ -70,6 +71,7 @@ class MealyDfaSUL(SUL):
             previous_state = current_state
             current_state = self.automaton.current_state.state_id
             if (previous_state, current_state) in self.missing:
+                self.num_successful_queries -= 1
                 return "unknown"
             if actual_output != expected_output:
                 return False

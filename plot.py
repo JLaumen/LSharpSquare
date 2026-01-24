@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-CSV_PATH_A = "benchmarking/results/benchmark_t200_rTrue_cFalse_all.csv"
-CSV_PATH_B = "benchmarking/results/benchmark_t200_rTrue_cTrue_all.csv"
+CSV_PATH_A = "benchmarking/results/benchmark_t20_rTrue_cFalse_all21.csv"
+CSV_PATH_B = "benchmarking/results/benchmark_t20_rTrue_cTrue_all21.csv"
 OUT_PNG = "vs_comp.pdf"
 
 
@@ -24,7 +24,7 @@ def to_bool(x):
 
 
 def parse_suffix_to_int(name: str):
-    last_two = name[9:11] if len(name) >= 2 else name
+    last_two = name[11:13] if len(name) >= 2 else name
     try:
         return int(last_two)
     except Exception:
@@ -48,7 +48,7 @@ def load_and_clean(path: str, label: str) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
     df["suffix_x"] = df["file name"].apply(parse_suffix_to_int)
-    df["total_time_num"] = pd.to_numeric(df.get("queries_learning", pd.Series([None] * len(df))), errors="coerce")
+    df["total_time_num"] = pd.to_numeric(df.get("automaton_size", pd.Series([None] * len(df))), errors="coerce")
     df = df.dropna(subset=["suffix_x", "total_time_num"]).copy()
     if df.empty:
         return pd.DataFrame()

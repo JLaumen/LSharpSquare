@@ -10,6 +10,21 @@ class MealyDfaOracle(Oracle):
         self.num_queries = 0
         self.num_steps = 0
 
+    def uneven_false(self, hypothesis_state, word, seen):
+        # Verify that all uneven-length words lead to non-accepting states
+        if hypothesis_state.is_accepting:
+            return word
+        if hypothesis_state.state_id in seen:
+            return None
+        seen.add(hypothesis_state.state_id)
+        for inp, next_state in hypothesis_state.transitions.items():
+            # Even lengths: take input and output transitions
+            for output, hyp_next_state in next_state.transitions.items():
+                cex = self.uneven_false(hyp_next_state, word + [inp, output], seen)
+                if cex is not None:
+                    return cex
+        return None
+
     def rec_equality(self, mealy_state, hypothesis_state, hypothesis, word, seen):
         if (mealy_state.state_id, hypothesis_state.state_id) in seen:
             return None
@@ -39,4 +54,9 @@ class MealyDfaOracle(Oracle):
 
     def find_cex(self, hypothesis: Automaton):
         cex = self.rec_equality(self.automaton.initial_state, hypothesis.initial_state, hypothesis, [], set())
+        if cex is None:
+            for inp, next_state in hypothesis.initial_state.transitions.items():
+                cex = self.uneven_false(next_state, [inp], set())
+                if cex is not None:
+                    break
         return cex
