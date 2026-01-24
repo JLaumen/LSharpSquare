@@ -11,6 +11,7 @@ from aalpy.oracles.PerfectKnowledgeEqOracle import PerfectKnowledgeEqOracle
 from IncompleteDfaSUL import IncompleteDfaSUL
 from LSharpSquare import run_lsharp_square
 from MealyDfaOracle import MealyDfaOracle
+from MealyDfaSUL import MealyDfaSUL
 from ValidityDataOracle import ValidityDataOracle
 
 test_cases_path = "benchmarking/benchmarks/"
@@ -111,17 +112,14 @@ def run_test_cases_pool(file: str, extension: str, solver_timeout, replace_basis
                 f.write(row)
 
 
-def run_mealy_benchmarks(file: str, solver_timeout, replace_basis, use_compatibility) -> None:
-    from MealyDfaSUL import MealyDfaSUL
+def run_mealy_benchmarks(file: str, solver_timeout, replace_basis, use_compatibility, number_missing, dfa_oracle) -> None:
     mealy = aalpy.load_automaton_from_file(file, automaton_type="mealy")
     triples = []
     for state1 in mealy.states:
         for input1, state2 in state1.transitions.items():
             for input2, state3 in state2.transitions.items():
                 triples.append((state1, input1, input2))
-    max_missing = len(triples)
-    missing = set()
-    # print(max_missing)
+    missing = random.sample(triples, min(number_missing, len(triples)))
     sul = MealyDfaSUL(mealy, list(missing))
     input_alphabet = mealy.get_input_alphabet()
     output_alphabet = set()
@@ -129,49 +127,12 @@ def run_mealy_benchmarks(file: str, solver_timeout, replace_basis, use_compatibi
         for output in state.output_fun.values():
             output_alphabet.add(output)
     alphabet = list(set(input_alphabet + list(output_alphabet)))
-    oracle = MealyDfaOracle(mealy, sul.missing)
+    oracle = MealyDfaOracle(sul.automaton, missing)
     learned_mealy, info = run_lsharp_square(alphabet, sul, oracle, return_data=True, solver_timeout=solver_timeout,
                                             replace_basis=replace_basis, use_compatibility=use_compatibility)
-    # print(info)
-    # print(f"file_name,missing_transitions," + ",".join([k for k,v in info.items()]))
-    print(f"{len(missing)}," + ",".join([str(info[k]) for k,v in info.items()]))
-    number_of_states = learned_mealy.size if learned_mealy is not None else 0
-    # number_of_state_list = [number_of_states]
-    dfa_oracle = PerfectKnowledgeEqOracle(alphabet, None, learned_mealy)
-
-    # Learn mealy machines with increasing number of missing transitions
-    num_fails = 0
-    increase = 5
-    i = increase
-    while i <= max_missing:
-        number_missing = i
-        mealy = aalpy.load_automaton_from_file(file, automaton_type="mealy")
-        mealy_states = len(mealy.states)
-        triples = []
-        for state1 in mealy.states:
-            for input1, state2 in state1.transitions.items():
-                for input2, state3 in state2.transitions.items():
-                    triples.append((state1, input1, input2))
-        missing = random.sample(triples, min(number_missing, len(triples)))
-        sul = MealyDfaSUL(mealy, list(missing))
-        oracle = MealyDfaOracle(mealy, sul.missing)
-        learned_mealy, info = run_lsharp_square(alphabet, sul, oracle, return_data=True, solver_timeout=solver_timeout,
-                                                replace_basis=replace_basis, use_compatibility=use_compatibility)
-        # print(info)
-        # number_of_states = learned_mealy.size if learned_mealy is not None else 0
-        # number_of_state_list.append(number_of_states)
-        cex = dfa_oracle.find_cex(learned_mealy)
-        if cex is not None:
-            num_fails += 1
-            if num_fails >= 3:
-                return
-        else:
-            num_fails = 0
-            i += increase
-            current_time = datetime.datetime.now().strftime("%H:%M:%S")
-            # print(f"{current_time},{mealy_states},{number_missing}")
-            values = info.items()
-            print(f"{len(missing)}," + ",".join([str(info[k]) for k,v in values]))
+    cex = dfa_oracle.find_cex(learned_mealy)
+    successful = learned_mealy is not None and cex is None
+    print(f"{len(missing)}," + ",".join([str(info[k]) for k,v in info.items()]) + f",{successful}")
 
 def main() -> None:
     solver_timeout = 2000000
@@ -188,22 +149,39 @@ def main() -> None:
         return
 
     # file_names = sorted([f for f in os.listdir(models_folder) if os.path.isfile(os.path.join(models_folder, f))])[:1]
-    file_names = ["OpenSSL_1.0.2_client_regular.dot"] * 16
-    if not file_names:
-        logging.info(f"No model files found in {models_folder}")
-        return
+    file_name = "OpenSSL_1.0.2_client_regular.dot"
+    # Learn the mealy machine with 0 missing transitions
+    mealy = aalpy.load_automaton_from_file(os.path.join(models_folder, file_name), automaton_type="mealy")
+    sul = MealyDfaSUL(mealy, [])
+    oracle = MealyDfaOracle(sul.automaton, set())
+    input_alphabet = mealy.get_input_alphabet()
+    output_alphabet = set()
+    for state in mealy.states:
+        for output in state.output_fun.values():
+            output_alphabet.add(output)
+    alphabet = list(set(input_alphabet + list(output_alphabet)))
+    learned_mealy, info = run_lsharp_square(alphabet, sul, oracle, return_data=True, solver_timeout=solver_timeout,
+                                            replace_basis=replace_basis, use_compatibility=use_compatibility)
+    dfa_oracle = PerfectKnowledgeEqOracle(alphabet, None, learned_mealy)
+    missings = []
+    for i in range(0, 51, 5):
+        for j in range(16):
+            missings.append(i)
+    file_names = [file_name] * len(missings)
 
     file_paths = [os.path.join(models_folder, f) for f in file_names]
 
     logging.info(f"Running Mealy benchmarks on {len(file_paths)} files in {models_folder}")
-    print("missing_transitions,learning_rounds,automaton_size,learning_time,smt_time,eq_oracle_time,total_time,queries_learning,successful_queries_learning,validity_query,nodes,informative_nodes,sul_steps,cache_saved,queries_eq_oracle,steps_eq_oracle")
+    print("missing_transitions,learning_rounds,automaton_size,learning_time,smt_time,eq_oracle_time,total_time,queries_learning,successful_queries_learning,validity_query,nodes,informative_nodes,sul_steps,cache_saved,queries_eq_oracle,steps_eq_oracle,successful")
     # run_mealy_benchmarks(file_paths[0], solver_timeout, replace_basis, use_compatibility)
     with concurrent.futures.ProcessPoolExecutor() as executor:
         executor.map(run_mealy_benchmarks,
                      file_paths,
                      [solver_timeout] * len(file_paths),
                      [replace_basis] * len(file_paths),
-                     [use_compatibility] * len(file_paths))
+                     [use_compatibility] * len(file_paths),
+                     missings,
+                     [dfa_oracle] * len(file_paths))
     logging.info("Mealy benchmarks complete")
 
     # solver_timeout = 200
