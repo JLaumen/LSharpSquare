@@ -1,5 +1,5 @@
+import argparse
 import concurrent.futures
-import datetime
 import logging
 import os
 import random
@@ -86,11 +86,11 @@ def process_file(file_name: str, target_folder: str, solver_timeout, replace_bas
                     str(info['eq_oracle_time']), str(info['total_time']), str(info['queries_learning']),
                     str(info['validity_query']), str(info['nodes']), str(info['informative_nodes']),
                     str(info['sul_steps']), str(info['queries_eq_oracle']), str(info['steps_eq_oracle'])]) + "\n"
-    logging.info(f"Finished testing {file_name}")
-    logging.info(f"Time: {info['total_time']}")
-    logging.info(f"Queries: {info['queries_learning']}")
-    logging.info(f"Validity: {info['validity_query']}")
-    logging.info(f"Size: {info['automaton_size']}")
+    # logging.info(f"Finished testing {file_name}")
+    # logging.info(f"Time: {info['total_time']}")
+    # logging.info(f"Queries: {info['queries_learning']}")
+    # logging.info(f"Validity: {info['validity_query']}")
+    # logging.info(f"Size: {info['automaton_size']}")
     return row
 
 
@@ -103,6 +103,7 @@ def run_test_cases_pool(file: str, extension: str, solver_timeout, replace_basis
         target_folder = file
         folder_path = os.path.join(oliveira, target_folder)
         file_names = sorted(os.listdir(folder_path))
+        logging.info(f"Running benchmarks on {len(file_names)} files in {folder_path}")
 
         with concurrent.futures.ProcessPoolExecutor() as executor:
             results = list(executor.map(process_file, file_names, [target_folder] * len(file_names),
@@ -111,8 +112,11 @@ def run_test_cases_pool(file: str, extension: str, solver_timeout, replace_basis
             for row in results:
                 f.write(row)
 
+        logging.info("Benchmarks complete")
 
-def run_mealy_benchmarks(file: str, solver_timeout, replace_basis, use_compatibility, number_missing, dfa_oracle) -> None:
+
+def run_mealy_benchmarks(file: str, solver_timeout, replace_basis, use_compatibility, number_missing,
+                         dfa_oracle) -> None:
     mealy = aalpy.load_automaton_from_file(file, automaton_type="mealy")
     triples = []
     for state1 in mealy.states:
@@ -132,74 +136,65 @@ def run_mealy_benchmarks(file: str, solver_timeout, replace_basis, use_compatibi
                                             replace_basis=replace_basis, use_compatibility=use_compatibility)
     cex = dfa_oracle.find_cex(learned_mealy)
     successful = learned_mealy is not None and cex is None
-    print(f"{len(missing)}," + ",".join([str(info[k]) for k,v in info.items()]) + f",{successful}")
-
-def main() -> None:
-    solver_timeout = 2000000
-    replace_basis = False
-    use_compatibility = False
-    # Redirect stdout to results.csv
+    print(f"{len(missing)}," + ",".join([str(info[k]) for k, v in info.items()]) + f",{successful}")
 
 
-    # run_test_cases_pool("all", f"2_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout,
-    #                     replace_basis, use_compatibility)
-    models_folder = "benchmarking/models"
-    if not os.path.isdir(models_folder):
-        logging.error(f"Models folder not found: {models_folder}")
-        return
+def main(benchmark: str, solver_timeout: int = 2000000, replace_basis: bool = False,
+         use_compatibility: bool = False) -> None:
+    if benchmark == "oliveira":
+        run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout,
+                            replace_basis, use_compatibility)
 
-    # file_names = sorted([f for f in os.listdir(models_folder) if os.path.isfile(os.path.join(models_folder, f))])[:1]
-    file_name = "OpenSSL_1.0.2_client_regular.dot"
-    # Learn the mealy machine with 0 missing transitions
-    mealy = aalpy.load_automaton_from_file(os.path.join(models_folder, file_name), automaton_type="mealy")
-    sul = MealyDfaSUL(mealy, [])
-    oracle = MealyDfaOracle(sul.automaton, set())
-    input_alphabet = mealy.get_input_alphabet()
-    output_alphabet = set()
-    for state in mealy.states:
-        for output in state.output_fun.values():
-            output_alphabet.add(output)
-    alphabet = list(set(input_alphabet + list(output_alphabet)))
-    learned_mealy, info = run_lsharp_square(alphabet, sul, oracle, return_data=True, solver_timeout=solver_timeout,
-                                            replace_basis=replace_basis, use_compatibility=use_compatibility)
-    dfa_oracle = PerfectKnowledgeEqOracle(alphabet, None, learned_mealy)
-    missings = []
-    for i in range(0, 51, 5):
-        for j in range(16):
-            missings.append(i)
-    file_names = [file_name] * len(missings)
+    elif benchmark == "mealy":
+        models_folder = "benchmarking/models"
+        # file_names = sorted([f for f in os.listdir(models_folder) if os.path.isfile(os.path.join(models_folder, f))])[:1]
+        file_name = "OpenSSL_1.0.2_client_regular.dot"
+        # Learn the mealy machine with 0 missing transitions
+        mealy = aalpy.load_automaton_from_file(os.path.join(models_folder, file_name), automaton_type="mealy")
+        sul = MealyDfaSUL(mealy, [])
+        oracle = MealyDfaOracle(sul.automaton, set())
+        input_alphabet = mealy.get_input_alphabet()
+        output_alphabet = set()
+        for state in mealy.states:
+            for output in state.output_fun.values():
+                output_alphabet.add(output)
+        alphabet = list(set(input_alphabet + list(output_alphabet)))
+        learned_mealy, info = run_lsharp_square(alphabet, sul, oracle, return_data=True, solver_timeout=solver_timeout,
+                                                replace_basis=replace_basis, use_compatibility=use_compatibility)
+        dfa_oracle = PerfectKnowledgeEqOracle(alphabet, None, learned_mealy)
+        missings = []
+        for i in range(0, 51, 5):
+            for j in range(16):
+                missings.append(i)
+        file_names = [file_name] * len(missings)
 
-    file_paths = [os.path.join(models_folder, f) for f in file_names]
+        file_paths = [os.path.join(models_folder, f) for f in file_names]
 
-    logging.info(f"Running Mealy benchmarks on {len(file_paths)} files in {models_folder}")
-    print("missing_transitions,learning_rounds,automaton_size,learning_time,smt_time,eq_oracle_time,total_time,queries_learning,successful_queries_learning,validity_query,nodes,informative_nodes,sul_steps,cache_saved,queries_eq_oracle,steps_eq_oracle,successful")
-    # run_mealy_benchmarks(file_paths[0], solver_timeout, replace_basis, use_compatibility)
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        executor.map(run_mealy_benchmarks,
-                     file_paths,
-                     [solver_timeout] * len(file_paths),
-                     [replace_basis] * len(file_paths),
-                     [use_compatibility] * len(file_paths),
-                     missings,
-                     [dfa_oracle] * len(file_paths))
-    logging.info("Mealy benchmarks complete")
+        logging.info(f"Running Mealy benchmarks on {len(file_paths)} files in {models_folder}")
+        print(
+            "missing_transitions,learning_rounds,automaton_size,learning_time,smt_time,eq_oracle_time,total_time,queries_learning,successful_queries_learning,validity_query,nodes,informative_nodes,sul_steps,cache_saved,queries_eq_oracle,steps_eq_oracle,successful")
+        # run_mealy_benchmarks(file_paths[0], solver_timeout, replace_basis, use_compatibility)
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            executor.map(run_mealy_benchmarks, file_paths, [solver_timeout] * len(file_paths),
+                         [replace_basis] * len(file_paths), [use_compatibility] * len(file_paths), missings,
+                         [dfa_oracle] * len(file_paths))
+        logging.info("Mealy benchmarks complete")
+    else:
+        logging.error(f"Unknown benchmark type: {benchmark}")
 
-    # solver_timeout = 200
-    # replace_basis = True
-    # use_compatibility = True
-    # run_test_cases_pool("all", f"2_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
-    #
-    # solver_timeout = 200
-    # replace_basis = True
-    # use_compatibility = True
-    # run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
-    #
-    # solver_timeout = 60
-    # replace_basis = True
-    # use_compatibility = False
-    # run_test_cases_pool("all", f"_t{solver_timeout}_r{replace_basis}_c{use_compatibility}", solver_timeout, replace_basis, use_compatibility)
     return
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Run benchmarks in run_benchmarks.py")
+    parser.add_argument("-b", "--benchmark", type=str, choices=["oliveira", "mealy"], required=True,
+                        help="Benchmark to run: \"oliveira\" or \"mealy\"")
+    parser.add_argument("-t", "--timeout", type=int, default=200, help="Solver timeout (integer, default: 200)")
+    parser.add_argument("-r", "--replace-basis", action="store_true", dest="replace_basis",
+                        help="Set replace_basis to True")
+    parser.add_argument("-c", "--compatibility", action="store_true", dest="use_compatibility",
+                        help="Set use_compatibility to True")
+    args = parser.parse_args()
+
+    main(benchmark=args.benchmark, solver_timeout=args.timeout, replace_basis=args.replace_basis,
+         use_compatibility=args.use_compatibility)

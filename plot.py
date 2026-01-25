@@ -140,15 +140,15 @@ def main():
         data_a_plot = [data_a[i] for i in nonempty_a_idx]
         pos_a_plot = [pos_a[i] for i in nonempty_a_idx]
         ax.boxplot(data_a_plot, positions=pos_a_plot, widths=width, patch_artist=True, showfliers=False, whis=(25, 100),
-            boxprops={"facecolor": sns_palette[0], "edgecolor": "#444444"}, medianprops={"color": "#000000"},
-            whiskerprops={"color": "#444444"}, capprops={"color": "#444444"})
+                   boxprops={"facecolor": sns_palette[0], "edgecolor": "#444444"}, medianprops={"color": "#000000"},
+                   whiskerprops={"color": "#444444"}, capprops={"color": "#444444"})
 
     if nonempty_b_idx:
         data_b_plot = [data_b[i] for i in nonempty_b_idx]
         pos_b_plot = [pos_b[i] for i in nonempty_b_idx]
         ax.boxplot(data_b_plot, positions=pos_b_plot, widths=width, patch_artist=True, showfliers=False, whis=(25, 100),
-            boxprops={"facecolor": sns_palette[1], "edgecolor": "#444444"}, medianprops={"color": "#000000"},
-            whiskerprops={"color": "#444444"}, capprops={"color": "#444444"})
+                   boxprops={"facecolor": sns_palette[1], "edgecolor": "#444444"}, medianprops={"color": "#000000"},
+                   whiskerprops={"color": "#444444"}, capprops={"color": "#444444"})
 
     ax.set_xticks(x)
     ax.set_xticklabels([str(s) for s in suffix_order])

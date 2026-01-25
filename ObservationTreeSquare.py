@@ -341,8 +341,8 @@ class ObservationTreeSquare:
                 continue
             s.add_assertion(
                 Or([Function(states_mapping, [Int(nodes.index(node))]).Equals(Int(self.guaranteed_basis.index(c))) for c
-                       in candidates] + [Function(states_mapping, [Int(nodes.index(node))]).Equals(Int(i)) for i in
-                                         range(len(self.guaranteed_basis), self.size)]))
+                    in candidates] + [Function(states_mapping, [Int(nodes.index(node))]).Equals(Int(i)) for i in
+                                      range(len(self.guaranteed_basis), self.size)]))
 
         # Correct delta
         for i in range(self.size):
@@ -399,8 +399,8 @@ class ObservationTreeSquare:
         """
         Extend the frontier self.size - len(self.guaranteed_basis) steps from the guaranteed basis
         """
-        # length = self.size - len(self.guaranteed_basis) + 3
-        length = 2
+        length = self.size - len(self.guaranteed_basis) + 3
+        # length = 2
         # Loop over words of length 'length'
         for word in itertools.product(self.alphabet, repeat=length):
             for node in self.guaranteed_basis:
@@ -417,8 +417,8 @@ class ObservationTreeSquare:
         Tries to find an observation tree,
         for which each frontier state is identified as much as possible.
         """
-        # self.expand_frontier()
-        # self.update_frontier_to_basis_dict()
+        self.expand_frontier()
+        self.update_frontier_to_basis_dict()
         while self.promote_node_to_basis():
             self.expand_frontier()
             self.update_frontier_to_basis_dict()

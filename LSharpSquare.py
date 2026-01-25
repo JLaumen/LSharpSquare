@@ -1,17 +1,13 @@
 import time
+
 from aalpy.base import Oracle
 from aalpy.base import SUL
+
 from ObservationTreeSquare import ObservationTreeSquare
 
-def run_lsharp_square(alphabet: list,
-                      sul: SUL,
-                      eq_oracle: Oracle,
-                      return_data: bool = False,
-                      solver_timeout: int = 200,
-                      replace_basis: bool = True,
-                      use_compatibility: bool = False):
 
-
+def run_lsharp_square(alphabet: list, sul: SUL, eq_oracle: Oracle, return_data: bool = False, solver_timeout: int = 200,
+                      replace_basis: bool = True, use_compatibility: bool = False):
     ob_tree = ObservationTreeSquare(alphabet, sul, solver_timeout, replace_basis, use_compatibility)
     start_time = time.time()
     timeout = solver_timeout
@@ -21,18 +17,8 @@ def run_lsharp_square(alphabet: list,
     validity_queries = 0
     hypothesis = None
 
-    ob_tree.expand_frontier()
-    ob_tree.update_frontier_to_basis_dict()
-
-    # ob_tree.insert_observation_sequence(["1","1","0"], [False] * 2 + [False])
-    # ob_tree.insert_observation_sequence(["1","1","1","1","0"], [False] * 4 + [False])
-    # ob_tree.insert_observation([], False)
-    # ob_tree.insert_observation_sequence(["0"], [True])
-    # from Apartness import Apartness
-    # print(Apartness.states_are_apart(ob_tree.root, ob_tree.get_successor(["1"]), ob_tree))
-    # print(Apartness.states_are_incompatible(ob_tree.root, ob_tree.get_successor(["1"]), ob_tree))
-    # print(Apartness.states_are_apart(ob_tree.root, ob_tree.get_successor(["1"]), ob_tree))
-    # exit()
+    # ob_tree.expand_frontier()
+    # ob_tree.update_frontier_to_basis_dict()
 
     while True:
         learning_rounds += 1
@@ -67,28 +53,14 @@ def run_lsharp_square(alphabet: list,
     smt_time = ob_tree.smt_time
     learning_time = total_time - eq_query_time - smt_time
 
-    info = {
-        'learning_rounds': learning_rounds,
-        'automaton_size': hypothesis.size if hypothesis else 0,
-        # time
-        'learning_time': learning_time,
-        'smt_time': smt_time,
-        'eq_oracle_time': eq_query_time,
-        'total_time': total_time,
+    info = {'learning_rounds': learning_rounds, 'automaton_size': hypothesis.size if hypothesis else 0, # time
+        'learning_time': learning_time, 'smt_time': smt_time, 'eq_oracle_time': eq_query_time, 'total_time': total_time,
         # learning algorithm
-        'queries_learning': sul.num_queries,
-        'successful_queries_learning': sul.num_successful_queries,
-        'validity_query': validity_queries,
-        # tree
-        'nodes': ob_tree.get_size(),
-        'informative_nodes': ob_tree.count_informative_nodes(),
-        # system under learning
-        'sul_steps': sul.num_steps,
-        'cache_saved': sul.num_cached_queries,
-        # eq_oracle
-        'queries_eq_oracle': eq_oracle.num_queries,
-        'steps_eq_oracle': eq_oracle.num_steps,
-    }
+        'queries_learning': sul.num_queries, 'successful_queries_learning': sul.num_successful_queries,
+        'validity_query': validity_queries, # tree
+        'nodes': ob_tree.get_size(), 'informative_nodes': ob_tree.count_informative_nodes(), # system under learning
+        'sul_steps': sul.num_steps, 'cache_saved': sul.num_cached_queries, # eq_oracle
+        'queries_eq_oracle': eq_oracle.num_queries, 'steps_eq_oracle': eq_oracle.num_steps, }
 
     if return_data:
         return hypothesis, info

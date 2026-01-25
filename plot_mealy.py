@@ -1,8 +1,10 @@
 import argparse
 import sys
-import pandas as pd
-import matplotlib.pyplot as plt
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
 
 def main():
     p = argparse.ArgumentParser(description="Plot `mealy` vs `missing` from a CSV `results.txt`.")
@@ -56,6 +58,7 @@ def main():
         print(f"Saved plot to {args.out}")
     else:
         plt.show()
+
 
 if __name__ == "__main__":
     main()

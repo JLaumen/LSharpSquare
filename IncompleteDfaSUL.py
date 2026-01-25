@@ -9,7 +9,7 @@ class DfaSUL(SUL):
         super().__init__()
         self.last_output = None
         self.automaton: Dfa = automaton
-        self.num_unsuccessful_queries = 0
+        self.num_successful_queries = 0
 
     def pre(self):
         self.automaton.reset_to_initial()
@@ -40,9 +40,10 @@ class DfaSUL(SUL):
             self.step(letter)
         out = self.post()
         self.num_queries += 1
+        self.num_successful_queries += 1
         self.num_steps += len(word)
         if out == "unknown":
-            self.num_unsuccessful_queries += 1
+            self.num_successful_queries -= 1
         return out
 
 

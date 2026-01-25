@@ -1,10 +1,5 @@
 from collections import deque
 
-from MooreNode import *
-
-pessimistic = False
-apart = False
-
 
 class Apartness:
     @staticmethod
@@ -69,20 +64,6 @@ class Apartness:
         return None
 
     @staticmethod
-    def clone_subtree(node, access):
-        new_node = MooreNode()
-        new_node.access_sequence = access
-        new_node.successors = {}
-        for k, v in node.successors.items():
-            if not v.leads_to_known:
-                continue
-            new_node.successors[k] = Apartness.clone_subtree(v, access + [k])
-            new_node.successors[k].parent = new_node
-            new_node.successors[k].input_to_parent = k
-        new_node.output = node.output
-        return new_node
-
-    @staticmethod
     def get_successors(node, input_val):
         for inp in input_val:
             if node is None:
@@ -91,22 +72,7 @@ class Apartness:
         return node
 
     @staticmethod
-    def get_access_sequence(node):
-        sequence = []
-        while node.parent is not None:
-            sequence.append(node.input_to_parent)
-            node = node.parent
-        sequence.reverse()
-        return sequence
-
-    @staticmethod
     def states_are_incompatible(first, second, ob_tree, experiment=True):
-        # print(first.id, second.id)
-        # print("Starting check")
-
-        first_orig = first
-        second_orig = second
-
         if not first.leads_to_known or not second.leads_to_known:
             return False
         if not ob_tree.use_compatibility:
@@ -123,7 +89,6 @@ class Apartness:
         # Checking apartness is easier than checking incompatibility,
         # so we check that first
         if Apartness.states_are_apart(first, second, ob_tree):
-            # ob_tree.apartness_cache.add((first.id, second.id))
             return True
 
         # Incompatibility can now only occur if the second node is a descendant of the first node.
@@ -136,25 +101,15 @@ class Apartness:
         # Try merging the two nodes, and see if there is a conflict.
         # In case of a conflict, we get the access sequences to the nodes causing the conflict
         conflicts = Apartness.merge(first, second, ob_tree)
-        # print("Conflicts found:", len(conflicts))
-        # print(conflicts)
         if not experiment:
             return conflicts != []
 
         for first_access, second_access in conflicts:
-            # return True
             # Incompatible!
-            # ob_tree.apartness_cache.add((first.id, second.id))
-
-            # print("Conflict when merging", first.id, second.id)
-            # print(first.access_sequence, second.access_sequence)
-            # print(first_access, second_access)
-            # print("Apartness candidates:")
 
             # Construct possible candidates that can prove apartness.
             # The first candidate is the transfer sequence from the first node to the first node causing the conflict
             transfer_sequence = ob_tree.get_transfer_sequence(first, second)
-            # print(first_access[len(first.access_sequence):])
             suffix = transfer_sequence + first_access[len(first.access_sequence):]
             candidate = first.access_sequence + suffix
             candidates = []
@@ -163,10 +118,8 @@ class Apartness:
             # from the second node causing the conflict, until we reach the second node.
             # This assumes that the first candidate is a suffix of the second access sequence,
             # but that seems to hold.
-
             while candidate != second_access:
                 candidates.append(candidate)
-                # print(candidate)
                 suffix = transfer_sequence + suffix
                 candidate = first.access_sequence + suffix
 
@@ -174,16 +127,8 @@ class Apartness:
             # The pairs are given by simply appending the candidates to the two nodes.
             # For now, we already do the experiments here.
             # In theory, you can stop once an experiment shows apartness.
-            # print("Suggested experiments:")
             for candidate in candidates:
-                # print(candidate)
-                # print(Apartness.states_are_apart(first_orig, second_orig, ob_tree))
-                # print("res:")
-                res = ob_tree.experiment(candidate)
-                # print(res)
-            if Apartness.states_are_apart(first_orig, second_orig, ob_tree):
-                # print("States are apart after experiments")
-                return True
+                _ = ob_tree.experiment(candidate)
 
         return conflicts != []
 
@@ -201,7 +146,6 @@ class Apartness:
         sequence = transfer_sequence.copy()
         conflicts = []
         while True:
-            # print(sequence)
             first_node = first
             second_node = Apartness.get_successors(second, sequence)
             if second_node is None:
@@ -211,30 +155,8 @@ class Apartness:
                 first_conflict = first_node.access_sequence + witness
                 second_conflict = second_node.access_sequence + witness
                 conflicts.append((first_conflict, second_conflict))
-                # return conflicts
             sequence += transfer_sequence
         return conflicts
-
-    @staticmethod
-    def test_merge():
-        p = MooreNode()
-        q = MooreNode()
-        r = MooreNode()
-        s = MooreNode()
-        t = MooreNode()
-        p.add_successor('a', False, s)
-        p.add_successor('b', True, q)
-        q.add_successor('b', True, r)
-        r.add_successor('a', True, t)
-        print(p)
-        print("p", p.id)
-        print("q", q.id)
-        print("r", r.id)
-        print("s", s.id)
-        print("t", t.id)
-        print(r.parent)
-        print(Apartness._show_states_are_apart_moore(p, q, ['a', 'b']))
-        print(Apartness.merge(p, q))  # print(Apartness.merge(q, p))
 
     @staticmethod
     def get_distinguishing_sequences(group, ob_tree):
@@ -251,7 +173,6 @@ class Apartness:
         while groups:
             access_seq, group = groups.popleft()
             for input_val in alphabet:
-                # node.get_output
                 valid_group = [node for node in group if node.get_output(input_val) is not None]
 
                 if len(valid_group) >= 2:
@@ -267,9 +188,6 @@ class Apartness:
 
     @staticmethod
     def _get_distinguishing_sequences_moore(group, alphabet):
-        if pessimistic:
-            return
-        # length = 0
         # Identifies if two states can be distinguished by any input-output pair in the provided alphabet
         groups = deque([([], group)])
         while groups:
@@ -282,7 +200,7 @@ class Apartness:
                 if None in outputs:
                     outputs.remove(None)
                 if len(outputs) >= 2:
-                    yield access_seq  # if length == 0:  #     length = len(access_seq)  # elif len(access_seq)>length:  #     return
+                    yield access_seq
 
                 for input_val in alphabet:
                     groups.append((access_seq + [input_val], [node.get_successor(input_val) for node in valid_group]))
@@ -336,10 +254,7 @@ class Apartness:
                 else:
                     hyp_output = hyp_state.output
 
-                # print(tree_output, hyp_output)
                 if tree_output != hyp_output and tree_output not in ["unknown", None]:
-                    # print(type(tree_output), type(hyp_output))
-                    # print("Distinguishing outputs:", tree_output, hyp_output)
                     return ob_tree.get_transfer_sequence(ob_tree_state, tree_state)
 
                 for input_val in ob_tree.alphabet:
