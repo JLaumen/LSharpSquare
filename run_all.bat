@@ -1,4 +1,9 @@
-python run_benchmarks.py -b "oliveira" -t 1
-python run_benchmarks.py -b "oliveira" -t 1 -r
-python run_benchmarks.py -b "oliveira" -t 1 -c
-python run_benchmarks.py -b "oliveira" -t 1 -r -c
+python run_benchmarks.py -b "oliveira" -t 200
+timeout /t 600 /nobreak
+python run_benchmarks.py -b "oliveira" -t 200 -r
+timeout /t 600 /nobreak
+python run_benchmarks.py -b "oliveira" -t 200 -c
+timeout /t 600 /nobreak
+python run_benchmarks.py -b "oliveira" -t 200 -r -c
+timeout /t 60 /nobreak
+shutdown /s /f

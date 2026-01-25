@@ -15,7 +15,7 @@ from MealyDfaSUL import MealyDfaSUL
 from ValidityDataOracle import ValidityDataOracle
 
 test_cases_path = "benchmarking/benchmarks/"
-logging.basicConfig(level=logging.INFO, format=f"%(asctime)s %(levelname)s: %(message)s", datefmt="%H:%M:%S")
+logging.basicConfig(level=logging.WARNING, format=f"%(asctime)s %(levelname)s: %(message)s", datefmt="%H:%M:%S")
 
 
 def is_simple_input(inp: str) -> bool:
