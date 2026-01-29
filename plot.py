@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-CSV_PATH_A = "benchmarking/results/benchmark_t200_rFalse_cFalse_all.csv"
-CSV_PATH_B = "benchmarking/results/benchmark_t200_rFalse_cTrue_all.csv"
+CSV_PATH_A = "benchmarking/results/benchmark_t200_rTrue_cFalse_all.csv"
+CSV_PATH_B = "benchmarking/results/benchmark_t200_rTrue_cTrue_all.csv"
 OUT_PNG = "vs_comp.pdf"
 
 
@@ -48,7 +48,7 @@ def load_and_clean(path: str, label: str) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
     df["suffix_x"] = df["file name"].apply(parse_suffix_to_int)
-    df["total_time_num"] = pd.to_numeric(df.get("queries_learning", pd.Series([None] * len(df))), errors="coerce")
+    df["total_time_num"] = pd.to_numeric(df.get("total_time", pd.Series([None] * len(df))), errors="coerce")
     df = df.dropna(subset=["suffix_x", "total_time_num"]).copy()
     if df.empty:
         return pd.DataFrame()
@@ -153,7 +153,7 @@ def main():
     ax.set_xticks(x)
     ax.set_xticklabels([str(s) for s in suffix_order])
     ax.set_xlabel("Benchmark")
-    ax.set_ylabel("Membership Queries")
+    ax.set_ylabel("Running Time (seconds)")
     # ax.set_title("Comparison of Basis Replacement (only benchmarks succeeded in both files)")
     ax.set_yscale("log")
     ax.grid(True, linestyle="--", alpha=0.25)

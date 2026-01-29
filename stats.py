@@ -2,7 +2,7 @@ import math
 
 import pandas as pd
 
-CSV_PATH = "benchmarking/results/benchmark_t200_rFalse_cFalse_all.csv"
+CSV_PATH = "benchmarking/results/benchmark_t200_rTrue_cFalse_all.csv"
 
 
 def to_bool(x):
@@ -37,7 +37,7 @@ def main():
         lambda r: (r["automaton_size_num"] != 0) and to_bool(r["succeeded_raw"]) and float(r["time_raw"]) < 200, axis=1)
 
     # columns to average for succeeded items
-    avg_cols = ["automaton_size", "total_time", "queries_learning", "validity_query"]
+    avg_cols = ["automaton_size", "total_time", "queries_learning", "validity_query","nodes","informative_nodes"]
 
     for name, group in df.groupby("group", sort=True):
         total = len(group)
